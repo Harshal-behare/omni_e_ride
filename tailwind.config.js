@@ -1,10 +1,7 @@
-const { default: tailwindConfig } = require("tailwindcss/defaultConfig")
-
 module.exports = {
   darkMode: ["class"],
   content: ["./app/**/*.{js,ts,jsx,tsx}", "./components/**/*.{js,ts,jsx,tsx}", "*.{js,ts,jsx,tsx,mdx}"],
   theme: {
-    ...tailwindConfig.theme,
     extend: {
       colors: {
         primary: "#3CB043",
@@ -43,7 +40,6 @@ module.exports = {
         hover: "0 6px 18px rgba(0,0,0,0.15)",
       },
       borderRadius: {
-        ...tailwindConfig.theme.extend.borderRadius,
         xl: "1rem",
         "2xl": "1.5rem",
         lg: "var(--radius)",
