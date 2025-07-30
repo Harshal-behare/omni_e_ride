@@ -5,7 +5,6 @@ import OfferBanner from "../components/OfferBanner"
 import TestimonialCard from "../components/TestimonialCard"
 import ContactForm from "../components/ContactForm"
 import Footer from "../components/Footer"
-import CostSavingsCalculator from "../components/CostSavingsCalculator"
 
 const models = [
   {
@@ -34,24 +33,6 @@ const models = [
     topSpeed: "70 km/h",
     chargingTime: "6-7 hours",
     battery: "72V 35Ah",
-  },
-  {
-    id: 4,
-    name: "Omni Pro",
-    price: 110000,
-    range: "150 km",
-    topSpeed: "80 km/h",
-    chargingTime: "7-8 hours",
-    battery: "72V 40Ah",
-  },
-  {
-    id: 5,
-    name: "Omni Max",
-    price: 125000,
-    range: "180 km",
-    topSpeed: "90 km/h",
-    chargingTime: "8-9 hours",
-    battery: "84V 45Ah",
   },
 ]
 
@@ -101,9 +82,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
-      {/* Cost Savings Calculator */}
-      <CostSavingsCalculator />
 
       {/* Why Choose Section */}
       <section className="py-24 bg-gray-50">

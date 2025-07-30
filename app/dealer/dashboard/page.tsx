@@ -45,7 +45,7 @@ export default function DealerDashboard() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b transition-all duration-300">
+      <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
@@ -81,10 +81,8 @@ export default function DealerDashboard() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`py-2 px-4 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 ${
-                  activeTab === tab.id
-                    ? "bg-[#3CB043] text-white shadow-lg"
-                    : "text-gray-600 hover:text-[#3CB043] hover:bg-gray-50"
+                className={`py-2 px-4 rounded-lg font-medium transition-colors ${
+                  activeTab === tab.id ? "bg-[#3CB043] text-white" : "text-gray-600 hover:text-[#3CB043]"
                 }`}
               >
                 {tab.label}
@@ -95,18 +93,13 @@ export default function DealerDashboard() {
 
         {/* Overview Tab */}
         {activeTab === "overview" && (
-          <div className="space-y-8 animate-in fade-in-50 duration-500">
+          <div className="space-y-8">
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {stats.map((stat, index) => (
-                <div
-                  key={index}
-                  className="bg-white rounded-xl shadow-lg p-6 transform transition-all duration-300 hover:scale-105 hover:shadow-xl"
-                >
+                <div key={index} className="bg-white rounded-xl shadow-lg p-6">
                   <div className="flex items-center">
-                    <div
-                      className={`w-12 h-12 ${stat.color} rounded-lg flex items-center justify-center transition-all duration-300 hover:scale-110`}
-                    >
+                    <div className={`w-12 h-12 ${stat.color} rounded-lg flex items-center justify-center`}>
                       <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path
                           strokeLinecap="round"
@@ -129,14 +122,11 @@ export default function DealerDashboard() {
             {/* Recent Sales & Inventory */}
             <div className="grid lg:grid-cols-2 gap-8">
               {/* Recent Sales */}
-              <div className="bg-white rounded-xl shadow-lg p-6 transform transition-all duration-300 hover:shadow-xl">
+              <div className="bg-white rounded-xl shadow-lg p-6">
                 <h3 className="text-lg font-bold text-gray-900 mb-4">Recent Sales</h3>
                 <div className="space-y-4">
                   {recentSales.map((sale) => (
-                    <div
-                      key={sale.id}
-                      className="flex items-center justify-between p-4 bg-gray-50 rounded-lg transition-all duration-300 hover:bg-gray-100 hover:shadow-md transform hover:scale-[1.02]"
-                    >
+                    <div key={sale.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                       <div>
                         <p className="font-medium text-gray-900">{sale.customer}</p>
                         <p className="text-sm text-gray-600">{sale.model}</p>
@@ -149,7 +139,7 @@ export default function DealerDashboard() {
               </div>
 
               {/* Inventory Status */}
-              <div className="bg-white rounded-xl shadow-lg p-6 transform transition-all duration-300 hover:shadow-xl">
+              <div className="bg-white rounded-xl shadow-lg p-6">
                 <h3 className="text-lg font-bold text-gray-900 mb-4">Inventory Status</h3>
                 <div className="space-y-4">
                   {inventory.map((item, index) => (

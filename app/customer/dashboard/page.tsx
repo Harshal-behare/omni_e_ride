@@ -36,7 +36,7 @@ export default function CustomerDashboard() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b transition-all duration-300">
+      <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
@@ -72,10 +72,8 @@ export default function CustomerDashboard() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`py-2 px-4 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 ${
-                  activeTab === tab.id
-                    ? "bg-[#3CB043] text-white shadow-lg"
-                    : "text-gray-600 hover:text-[#3CB043] hover:bg-gray-50"
+                className={`py-2 px-4 rounded-lg font-medium transition-colors ${
+                  activeTab === tab.id ? "bg-[#3CB043] text-white" : "text-gray-600 hover:text-[#3CB043]"
                 }`}
               >
                 {tab.label}
@@ -86,11 +84,11 @@ export default function CustomerDashboard() {
 
         {/* Overview Tab */}
         {activeTab === "overview" && (
-          <div className="space-y-8 animate-in fade-in-50 duration-500">
+          <div className="space-y-8">
             {/* Quick Actions */}
             <div className="grid md:grid-cols-3 gap-6">
-              <div className="bg-white rounded-xl shadow-lg p-6 text-center transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
-                <div className="w-16 h-16 bg-[#3CB043] rounded-full flex items-center justify-center mx-auto mb-4 transition-all duration-300 hover:bg-[#2D7A32]">
+              <div className="bg-white rounded-xl shadow-lg p-6 text-center">
+                <div className="w-16 h-16 bg-[#3CB043] rounded-full flex items-center justify-center mx-auto mb-4">
                   <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
@@ -104,13 +102,13 @@ export default function CustomerDashboard() {
                 <p className="text-gray-600 mb-4">Explore our latest electric scooters</p>
                 <Link
                   href="/models"
-                  className="bg-[#3CB043] text-white px-4 py-2 rounded-lg hover:bg-[#2D7A32] transition-all duration-300 transform hover:scale-105 shadow-md hover:shadow-lg"
+                  className="bg-[#3CB043] text-white px-4 py-2 rounded-lg hover:bg-[#2D7A32] transition-colors"
                 >
                   View Models
                 </Link>
               </div>
 
-              <div className="bg-white rounded-xl shadow-lg p-6 text-center transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
+              <div className="bg-white rounded-xl shadow-lg p-6 text-center">
                 <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
                   <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -123,7 +121,7 @@ export default function CustomerDashboard() {
                 </button>
               </div>
 
-              <div className="bg-white rounded-xl shadow-lg p-6 text-center transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
+              <div className="bg-white rounded-xl shadow-lg p-6 text-center">
                 <div className="w-16 h-16 bg-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
                   <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
@@ -148,14 +146,11 @@ export default function CustomerDashboard() {
             {/* Recent Activity */}
             <div className="grid lg:grid-cols-2 gap-8">
               {/* My Orders */}
-              <div className="bg-white rounded-xl shadow-lg p-6 transform transition-all duration-300 hover:shadow-xl">
+              <div className="bg-white rounded-xl shadow-lg p-6">
                 <h3 className="text-lg font-bold text-gray-900 mb-4">Recent Orders</h3>
                 <div className="space-y-4">
                   {myOrders.map((order) => (
-                    <div
-                      key={order.id}
-                      className="flex items-center justify-between p-4 bg-gray-50 rounded-lg transition-all duration-300 hover:bg-gray-100 hover:shadow-md transform hover:scale-[1.02]"
-                    >
+                    <div key={order.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                       <div>
                         <p className="font-medium text-gray-900">{order.model}</p>
                         <p className="text-sm text-gray-600">Order #{order.id}</p>
@@ -177,14 +172,11 @@ export default function CustomerDashboard() {
               </div>
 
               {/* Upcoming Test Rides */}
-              <div className="bg-white rounded-xl shadow-lg p-6 transform transition-all duration-300 hover:shadow-xl">
+              <div className="bg-white rounded-xl shadow-lg p-6">
                 <h3 className="text-lg font-bold text-gray-900 mb-4">Upcoming Test Rides</h3>
                 <div className="space-y-4">
                   {testRides.map((ride) => (
-                    <div
-                      key={ride.id}
-                      className="flex items-center justify-between p-4 bg-gray-50 rounded-lg transition-all duration-300 hover:bg-gray-100 hover:shadow-md transform hover:scale-[1.02]"
-                    >
+                    <div key={ride.id} className="p-4 bg-gray-50 rounded-lg">
                       <div className="flex justify-between items-center mb-2">
                         <p className="font-medium text-gray-900">{ride.model}</p>
                         <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
