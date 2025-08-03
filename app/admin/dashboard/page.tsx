@@ -1,157 +1,202 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { useAuthContext } from "@/components/AuthProvider"
+import { supabase } from "@/lib/supabase"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-
-// Demo data
-const dashboardStats = {
-  totalSales: 1250,
-  monthlyRevenue: 9750000,
-  activeCustomers: 8500,
-  pendingOrders: 45,
-  totalDealers: 25,
-  serviceRequests: 12,
-}
-
-const recentOrders = [
-  {
-    id: "ORD001",
-    customer: "Rajesh Kumar",
-    model: "Omni Swift",
-    amount: 63000,
-    status: "Delivered",
-    date: "2024-01-15",
-  },
-  {
-    id: "ORD002",
-    customer: "Priya Singh",
-    model: "Omni Power",
-    amount: 78000,
-    status: "Processing",
-    date: "2024-01-14",
-  },
-  { id: "ORD003", customer: "Amit Sharma", model: "Omni Elite", amount: 95000, status: "Shipped", date: "2024-01-13" },
-  { id: "ORD004", customer: "Sunita Devi", model: "Omni Pro", amount: 110000, status: "Confirmed", date: "2024-01-12" },
-  {
-    id: "ORD005",
-    customer: "Vikash Yadav",
-    model: "Omni Max",
-    amount: 125000,
-    status: "Delivered",
-    date: "2024-01-11",
-  },
-]
-
-const dealerRequests = [
-  {
-    id: "DR001",
-    name: "Bihar Motors",
-    location: "Muzaffarpur",
-    contact: "+91 9876543210",
-    status: "Pending",
-    date: "2024-01-15",
-  },
-  {
-    id: "DR002",
-    name: "Green Wheels",
-    location: "Gaya",
-    contact: "+91 9876543211",
-    status: "Approved",
-    date: "2024-01-14",
-  },
-  {
-    id: "DR003",
-    name: "Electric Zone",
-    location: "Bhagalpur",
-    contact: "+91 9876543212",
-    status: "Under Review",
-    date: "2024-01-13",
-  },
-  {
-    id: "DR004",
-    name: "Eco Riders",
-    location: "Darbhanga",
-    contact: "+91 9876543213",
-    status: "Pending",
-    date: "2024-01-12",
-  },
-]
-
-const testRideBookings = [
-  {
-    id: "TR001",
-    customer: "Rahul Gupta",
-    model: "Omni Swift",
-    date: "2024-01-16",
-    time: "10:00 AM",
-    dealer: "Patna Central",
-    status: "Confirmed",
-  },
-  {
-    id: "TR002",
-    customer: "Neha Kumari",
-    model: "Omni Power",
-    date: "2024-01-16",
-    time: "2:00 PM",
-    dealer: "Patna East",
-    status: "Pending",
-  },
-  {
-    id: "TR003",
-    customer: "Suresh Singh",
-    model: "Omni Elite",
-    date: "2024-01-17",
-    time: "11:00 AM",
-    dealer: "Patna West",
-    status: "Confirmed",
-  },
-  {
-    id: "TR004",
-    customer: "Kavita Devi",
-    model: "Omni Pro",
-    date: "2024-01-17",
-    time: "3:00 PM",
-    dealer: "Patna South",
-    status: "Completed",
-  },
-]
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Loader2, Plus, Users, ShoppingCart, TrendingUp, AlertTriangle } from "lucide-react"
 
 export default function AdminDashboard() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [userType, setUserType] = useState("")
+  const { user, userProfile, loading: authLoading, signOut } = useAuthContext()
   const router = useRouter()
 
-  useEffect(() => {
-    const loggedIn = localStorage.getItem("isLoggedIn")
-    const type = localStorage.getItem("userType")
+  const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    totalOrders: 0,
+    totalDealers: 0,
+    pendingDealers: 0,
+    monthlyRevenue: 0,
+  })
 
-    if (!loggedIn || type !== "admin") {
+  // Add user form
+  const [showAddUser, setShowAddUser] = useState(false)
+  const [addUserLoading, setAddUserLoading] = useState(false)
+  const [addUserError, setAddUserError] = useState("")
+  const [addUserSuccess, setAddUserSuccess] = useState("")
+  const [newUserEmail, setNewUserEmail] = useState("")
+  const [newUserType, setNewUserType] = useState<"admin" | "dealer">("dealer")
+  const [newUserName, setNewUserName] = useState("")
+  const [newUserPhone, setNewUserPhone] = useState("")
+
+  // Recent data
+  const [recentOrders, setRecentOrders] = useState([])
+  const [recentUsers, setRecentUsers] = useState([])
+  const [pendingDealers, setPendingDealers] = useState([])
+
+  useEffect(() => {
+    if (!authLoading && (!user || userProfile?.user_type !== "admin")) {
       router.push("/login")
       return
     }
 
-    setIsLoggedIn(true)
-    setUserType(type)
-  }, [router])
+    if (user && userProfile?.user_type === "admin") {
+      fetchDashboardData()
+    }
+  }, [user, userProfile, authLoading, router])
 
-  const handleLogout = () => {
-    localStorage.removeItem("userType")
-    localStorage.removeItem("isLoggedIn")
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true)
+
+      // Fetch stats
+      const [usersResult, ordersResult, dealersResult] = await Promise.all([
+        supabase.from("user_profiles").select("id, user_type").eq("user_type", "customer"),
+        supabase.from("orders").select("id, amount, status"),
+        supabase.from("dealers").select("id, status"),
+      ])
+
+      // Calculate stats
+      const totalUsers = usersResult.data?.length || 0
+      const totalOrders = ordersResult.data?.length || 0
+      const totalDealers = dealersResult.data?.length || 0
+      const pendingDealersCount = dealersResult.data?.filter((d) => d.status === "pending").length || 0
+      const monthlyRevenue = ordersResult.data?.reduce((sum, order) => sum + (order.amount || 0), 0) || 0
+
+      setStats({
+        totalUsers,
+        totalOrders,
+        totalDealers,
+        pendingDealers: pendingDealersCount,
+        monthlyRevenue,
+      })
+
+      // Fetch recent data
+      const [recentOrdersResult, recentUsersResult, pendingDealersResult] = await Promise.all([
+        supabase.from("orders").select("*, models(name)").order("created_at", { ascending: false }).limit(5),
+        supabase.from("user_profiles").select("*").order("created_at", { ascending: false }).limit(5),
+        supabase.from("dealers").select("*").eq("status", "pending").order("created_at", { ascending: false }).limit(5),
+      ])
+
+      setRecentOrders(recentOrdersResult.data || [])
+      setRecentUsers(recentUsersResult.data || [])
+      setPendingDealers(pendingDealersResult.data || [])
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleAddUser = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setAddUserLoading(true)
+    setAddUserError("")
+    setAddUserSuccess("")
+
+    try {
+      // Create user profile directly (admin privilege)
+      const { data, error } = await supabase
+        .from("user_profiles")
+        .insert({
+          email: newUserEmail,
+          user_type: newUserType,
+          full_name: newUserName,
+          phone: newUserPhone,
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+
+      // If dealer, also create dealer record
+      if (newUserType === "dealer") {
+        const { error: dealerError } = await supabase.from("dealers").insert({
+          user_id: data.id,
+          name: newUserName,
+          location: "To be updated",
+          address: "To be updated",
+          phone: newUserPhone,
+          email: newUserEmail,
+          manager_name: newUserName,
+          status: "pending",
+        })
+
+        if (dealerError) throw dealerError
+      }
+
+      setAddUserSuccess(`${newUserType} account created successfully! They can now sign in with their email.`)
+
+      // Clear form
+      setNewUserEmail("")
+      setNewUserName("")
+      setNewUserPhone("")
+      setNewUserType("dealer")
+
+      // Refresh data
+      fetchDashboardData()
+    } catch (error: any) {
+      setAddUserError(error.message || "Failed to create user")
+    } finally {
+      setAddUserLoading(false)
+    }
+  }
+
+  const handleLogout = async () => {
+    await signOut()
     router.push("/")
   }
 
-  if (!isLoggedIn) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>
+  const approveDealerRequest = async (dealerId: string) => {
+    try {
+      const { error } = await supabase.from("dealers").update({ status: "active" }).eq("id", dealerId)
+
+      if (error) throw error
+
+      // Refresh data
+      fetchDashboardData()
+    } catch (error) {
+      console.error("Error approving dealer:", error)
+    }
+  }
+
+  if (authLoading || loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p>Loading admin dashboard...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!user || userProfile?.user_type !== "admin") {
+    return null
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b transition-all duration-300">
+      <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div>
@@ -159,7 +204,7 @@ export default function AdminDashboard() {
               <p className="text-sm text-gray-600">Admin Dashboard</p>
             </div>
             <div className="flex items-center space-x-4">
-              <span className="text-gray-700">Welcome, Admin</span>
+              <span className="text-gray-700">Welcome, {userProfile?.full_name}</span>
               <Button onClick={handleLogout} variant="outline" size="sm">
                 Logout
               </Button>
@@ -170,112 +215,211 @@ export default function AdminDashboard() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card className="transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+          <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Sales</CardTitle>
-              <svg className="h-4 w-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-              </svg>
+              <CardTitle className="text-sm font-medium">Total Customers</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{dashboardStats.totalSales.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">+12% from last month</p>
+              <div className="text-2xl font-bold">{stats.totalUsers}</div>
             </CardContent>
           </Card>
 
-          <Card className="transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
+          <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Monthly Revenue</CardTitle>
-              <svg className="h-4 w-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"
-                />
-              </svg>
+              <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
+              <ShoppingCart className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">₹{(dashboardStats.monthlyRevenue / 1000000).toFixed(1)}M</div>
-              <p className="text-xs text-muted-foreground">+8% from last month</p>
+              <div className="text-2xl font-bold">{stats.totalOrders}</div>
             </CardContent>
           </Card>
 
-          <Card className="transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
+          <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Customers</CardTitle>
-              <svg className="h-4 w-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                />
-              </svg>
+              <CardTitle className="text-sm font-medium">Total Dealers</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{dashboardStats.activeCustomers.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">+15% from last month</p>
+              <div className="text-2xl font-bold">{stats.totalDealers}</div>
             </CardContent>
           </Card>
 
-          <Card className="transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
+          <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending Orders</CardTitle>
-              <svg className="h-4 w-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                />
-              </svg>
+              <CardTitle className="text-sm font-medium">Pending Dealers</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{dashboardStats.pendingOrders}</div>
-              <p className="text-xs text-muted-foreground">Requires attention</p>
+              <div className="text-2xl font-bold">{stats.pendingDealers}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Revenue</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">₹{stats.monthlyRevenue.toLocaleString()}</div>
             </CardContent>
           </Card>
         </div>
 
+        {/* Add User Button */}
+        <div className="mb-6">
+          <Dialog open={showAddUser} onOpenChange={setShowAddUser}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Admin/Dealer Account
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Admin/Dealer Account</DialogTitle>
+                <DialogDescription>
+                  Create a new admin or dealer account. They will be able to sign in with their email.
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleAddUser} className="space-y-4">
+                <div>
+                  <Label htmlFor="user-type">Account Type</Label>
+                  <Select value={newUserType} onValueChange={(value: "admin" | "dealer") => setNewUserType(value)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="dealer">Dealer</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="user-email">Email</Label>
+                  <Input
+                    id="user-email"
+                    type="email"
+                    value={newUserEmail}
+                    onChange={(e) => setNewUserEmail(e.target.value)}
+                    required
+                    placeholder="Enter email address"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="user-name">Full Name</Label>
+                  <Input
+                    id="user-name"
+                    type="text"
+                    value={newUserName}
+                    onChange={(e) => setNewUserName(e.target.value)}
+                    required
+                    placeholder="Enter full name"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="user-phone">Phone Number</Label>
+                  <Input
+                    id="user-phone"
+                    type="tel"
+                    value={newUserPhone}
+                    onChange={(e) => setNewUserPhone(e.target.value)}
+                    placeholder="Enter phone number"
+                  />
+                </div>
+
+                {addUserError && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{addUserError}</AlertDescription>
+                  </Alert>
+                )}
+
+                {addUserSuccess && (
+                  <Alert>
+                    <AlertDescription>{addUserSuccess}</AlertDescription>
+                  </Alert>
+                )}
+
+                <div className="flex gap-2">
+                  <Button type="submit" disabled={addUserLoading}>
+                    {addUserLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Create Account
+                  </Button>
+                  <Button type="button" variant="outline" onClick={() => setShowAddUser(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
+
         {/* Main Content */}
-        <Tabs defaultValue="orders" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4 bg-gray-100 p-1 rounded-lg">
-            <TabsTrigger
-              value="orders"
-              className="transition-all duration-300 data-[state=active]:bg-white data-[state=active]:shadow-sm"
-            >
-              Recent Orders
-            </TabsTrigger>
-            <TabsTrigger
-              value="dealers"
-              className="transition-all duration-300 data-[state=active]:bg-white data-[state=active]:shadow-sm"
-            >
-              Dealer Requests
-            </TabsTrigger>
-            <TabsTrigger
-              value="testrides"
-              className="transition-all duration-300 data-[state=active]:bg-white data-[state=active]:shadow-sm"
-            >
-              Test Rides
-            </TabsTrigger>
-            <TabsTrigger
-              value="analytics"
-              className="transition-all duration-300 data-[state=active]:bg-white data-[state=active]:shadow-sm"
-            >
-              Analytics
-            </TabsTrigger>
+        <Tabs defaultValue="overview" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="orders">Recent Orders</TabsTrigger>
+            <TabsTrigger value="users">Recent Users</TabsTrigger>
+            <TabsTrigger value="dealers">Pending Dealers</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="orders" className="space-y-4">
+          <TabsContent value="overview">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Recent Orders</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {recentOrders.map((order: any) => (
+                      <div key={order.id} className="flex items-center justify-between p-3 border rounded">
+                        <div>
+                          <p className="font-medium">{order.customer_name}</p>
+                          <p className="text-sm text-gray-600">{order.models?.name || order.model_name}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold">₹{order.amount.toLocaleString()}</p>
+                          <Badge variant={order.status === "delivered" ? "default" : "secondary"}>{order.status}</Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Recent Users</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {recentUsers.map((user: any) => (
+                      <div key={user.id} className="flex items-center justify-between p-3 border rounded">
+                        <div>
+                          <p className="font-medium">{user.full_name}</p>
+                          <p className="text-sm text-gray-600">{user.email}</p>
+                        </div>
+                        <Badge variant="outline">{user.user_type}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="orders">
             <Card className="transform transition-all duration-300 hover:shadow-xl">
               <CardHeader>
                 <CardTitle>Recent Orders</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {recentOrders.map((order) => (
+                  {recentOrders.map((order: any) => (
                     <div
                       key={order.id}
                       className="flex items-center justify-between p-4 border rounded-lg transition-all duration-300 hover:bg-gray-50 hover:shadow-md transform hover:scale-[1.01]"
@@ -284,20 +428,20 @@ export default function AdminDashboard() {
                         <div className="flex items-center space-x-4">
                           <div>
                             <p className="font-semibold">{order.id}</p>
-                            <p className="text-sm text-gray-600">{order.customer}</p>
+                            <p className="text-sm text-gray-600">{order.customer_name}</p>
                           </div>
                           <div>
-                            <p className="font-medium">{order.model}</p>
+                            <p className="font-medium">{order.models?.name || order.model_name}</p>
                             <p className="text-sm text-gray-600">₹{order.amount.toLocaleString()}</p>
                           </div>
                           <div>
                             <Badge
                               variant={
-                                order.status === "Delivered"
+                                order.status === "delivered"
                                   ? "default"
-                                  : order.status === "Shipped"
+                                  : order.status === "shipped"
                                     ? "secondary"
-                                    : order.status === "Processing"
+                                    : order.status === "processing"
                                       ? "destructive"
                                       : "outline"
                               }
@@ -307,7 +451,7 @@ export default function AdminDashboard() {
                           </div>
                         </div>
                       </div>
-                      <div className="text-sm text-gray-500">{order.date}</div>
+                      <div className="text-sm text-gray-500">{order.created_at}</div>
                     </div>
                   ))}
                 </div>
@@ -315,182 +459,75 @@ export default function AdminDashboard() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="dealers" className="space-y-4">
+          <TabsContent value="users">
             <Card className="transform transition-all duration-300 hover:shadow-xl">
               <CardHeader>
-                <CardTitle>Dealer Applications</CardTitle>
+                <CardTitle>Recent Users</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {dealerRequests.map((request) => (
+                  {recentUsers.map((user: any) => (
                     <div
-                      key={request.id}
+                      key={user.id}
                       className="flex items-center justify-between p-4 border rounded-lg transition-all duration-300 hover:bg-gray-50 hover:shadow-md transform hover:scale-[1.01]"
                     >
                       <div className="flex-1">
                         <div className="flex items-center space-x-4">
                           <div>
-                            <p className="font-semibold">{request.name}</p>
-                            <p className="text-sm text-gray-600">{request.location}</p>
+                            <p className="font-semibold">{user.id}</p>
+                            <p className="text-sm text-gray-600">{user.full_name}</p>
                           </div>
                           <div>
-                            <p className="text-sm">{request.contact}</p>
-                            <p className="text-sm text-gray-600">{request.date}</p>
+                            <p className="text-sm">{user.email}</p>
+                            <p className="text-sm text-gray-600">{user.created_at}</p>
                           </div>
                           <div>
-                            <Badge
-                              variant={
-                                request.status === "Approved"
-                                  ? "default"
-                                  : request.status === "Under Review"
-                                    ? "secondary"
-                                    : "outline"
-                              }
-                            >
-                              {request.status}
-                            </Badge>
+                            <Badge variant="outline">{user.user_type}</Badge>
                           </div>
                         </div>
                       </div>
-                      <div className="flex space-x-2">
+                      <div className="text-sm text-gray-500">{user.created_at}</div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="dealers">
+            <Card>
+              <CardHeader>
+                <CardTitle>Pending Dealer Requests</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {pendingDealers.map((dealer: any) => (
+                    <div key={dealer.id} className="flex items-center justify-between p-4 border rounded">
+                      <div>
+                        <p className="font-medium">{dealer.name}</p>
+                        <p className="text-sm text-gray-600">{dealer.email}</p>
+                        <p className="text-sm text-gray-600">{dealer.location}</p>
+                      </div>
+                      <div className="flex gap-2">
                         <Button
                           size="sm"
-                          variant="outline"
-                          className="transition-all duration-300 hover:scale-105 bg-transparent"
-                        >
-                          View
-                        </Button>
-                        <Button
-                          size="sm"
-                          className="transition-all duration-300 hover:scale-105 bg-[#3CB043] hover:bg-[#2D7A32]"
+                          onClick={() => approveDealerRequest(dealer.id)}
+                          className="bg-green-600 hover:bg-green-700"
                         >
                           Approve
                         </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="testrides" className="space-y-4">
-            <Card className="transform transition-all duration-300 hover:shadow-xl">
-              <CardHeader>
-                <CardTitle>Test Ride Bookings</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {testRideBookings.map((booking) => (
-                    <div
-                      key={booking.id}
-                      className="flex items-center justify-between p-4 border rounded-lg transition-all duration-300 hover:bg-gray-50 hover:shadow-md transform hover:scale-[1.01]"
-                    >
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-4">
-                          <div>
-                            <p className="font-semibold">{booking.customer}</p>
-                            <p className="text-sm text-gray-600">{booking.model}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium">{booking.date}</p>
-                            <p className="text-sm text-gray-600">{booking.time}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm">{booking.dealer}</p>
-                            <Badge
-                              variant={
-                                booking.status === "Completed"
-                                  ? "default"
-                                  : booking.status === "Confirmed"
-                                    ? "secondary"
-                                    : "outline"
-                              }
-                            >
-                              {booking.status}
-                            </Badge>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex space-x-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="transition-all duration-300 hover:scale-105 bg-transparent"
-                        >
-                          Contact
+                        <Button size="sm" variant="outline">
+                          View Details
                         </Button>
-                        <Button size="sm">Confirm</Button>
                       </div>
                     </div>
                   ))}
+                  {pendingDealers.length === 0 && (
+                    <p className="text-center text-gray-500 py-8">No pending dealer requests</p>
+                  )}
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
-
-          <TabsContent value="analytics" className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="transform transition-all duration-300 hover:shadow-xl">
-                <CardHeader>
-                  <CardTitle>Sales Performance</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span>Omni Swift</span>
-                      <span className="font-semibold">450 units</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span>Omni Power</span>
-                      <span className="font-semibold">320 units</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span>Omni Elite</span>
-                      <span className="font-semibold">280 units</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span>Omni Pro</span>
-                      <span className="font-semibold">150 units</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span>Omni Max</span>
-                      <span className="font-semibold">50 units</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="transform transition-all duration-300 hover:shadow-xl">
-                <CardHeader>
-                  <CardTitle>Regional Performance</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span>Patna</span>
-                      <span className="font-semibold">35%</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span>Gaya</span>
-                      <span className="font-semibold">18%</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span>Muzaffarpur</span>
-                      <span className="font-semibold">15%</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span>Bhagalpur</span>
-                      <span className="font-semibold">12%</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span>Others</span>
-                      <span className="font-semibold">20%</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
           </TabsContent>
         </Tabs>
       </div>

@@ -1,13 +1,18 @@
 import type React from "react"
-import "./globals.css"
 import type { Metadata } from "next"
-import WhatsAppButton from "../components/WhatsAppButton"
+import { Inter } from "next/font/google"
+import "./globals.css"
+import { AuthProvider } from "@/components/AuthProvider"
+import { Toaster } from "@/components/ui/toaster"
+
+const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Omni E-Ride - Premium Electric Scooters in Bihar",
+  title: "Omni E-Ride - Electric Scooters in Bihar",
   description:
-    "Discover Omni E-Ride's premium electric scooters in Bihar. Zero emissions, low running costs, and competitive pricing. Book your test ride today!",
-  generator: "v0.dev",
+    "Leading electric scooter manufacturer and dealer in Bihar. Eco-friendly, affordable, and reliable electric vehicles for sustainable transportation.",
+  keywords: "electric scooter, e-scooter, Bihar, eco-friendly, sustainable transport, electric vehicle",
+    generator: 'v0.dev'
 }
 
 export default function RootLayout({
@@ -17,9 +22,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>
-        {children}
-        <WhatsAppButton />
+      <body className={inter.className}>
+        <AuthProvider>
+          {children}
+          <Toaster />
+        </AuthProvider>
       </body>
     </html>
   )

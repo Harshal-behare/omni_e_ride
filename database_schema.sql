@@ -1,0 +1,137 @@
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
+
+CREATE TABLE public.contact_inquiries (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  name text NOT NULL,
+  email text NOT NULL,
+  phone text NOT NULL,
+  message text NOT NULL,
+  subject text,
+  status USER-DEFINED DEFAULT 'new'::inquiry_status,
+  assigned_to uuid,
+  response text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT contact_inquiries_pkey PRIMARY KEY (id),
+  CONSTRAINT contact_inquiries_assigned_to_fkey FOREIGN KEY (assigned_to) REFERENCES public.user_profiles(id)
+);
+CREATE TABLE public.dealer_sales (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  dealer_id uuid,
+  order_id uuid,
+  commission_amount integer NOT NULL,
+  commission_rate numeric NOT NULL,
+  sale_date date DEFAULT CURRENT_DATE,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT dealer_sales_pkey PRIMARY KEY (id),
+  CONSTRAINT dealer_sales_dealer_id_fkey FOREIGN KEY (dealer_id) REFERENCES public.dealers(id),
+  CONSTRAINT dealer_sales_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id)
+);
+CREATE TABLE public.dealers (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid,
+  name text NOT NULL,
+  location text NOT NULL,
+  address text NOT NULL,
+  phone text NOT NULL,
+  email text NOT NULL,
+  manager_name text NOT NULL,
+  status USER-DEFINED DEFAULT 'pending'::dealer_status,
+  monthly_sales integer DEFAULT 0,
+  total_sales integer DEFAULT 0,
+  commission_rate numeric DEFAULT 5.00,
+  territory ARRAY DEFAULT '{}'::text[],
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT dealers_pkey PRIMARY KEY (id),
+  CONSTRAINT dealers_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.user_profiles(id)
+);
+CREATE TABLE public.inventory (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  dealer_id uuid,
+  model_id integer,
+  stock_quantity integer DEFAULT 0,
+  reserved_quantity integer DEFAULT 0,
+  last_updated timestamp with time zone DEFAULT now(),
+  CONSTRAINT inventory_pkey PRIMARY KEY (id),
+  CONSTRAINT inventory_dealer_id_fkey FOREIGN KEY (dealer_id) REFERENCES public.dealers(id),
+  CONSTRAINT inventory_model_id_fkey FOREIGN KEY (model_id) REFERENCES public.models(id)
+);
+CREATE TABLE public.models (
+  id integer NOT NULL DEFAULT nextval('models_id_seq'::regclass),
+  name text NOT NULL,
+  price integer NOT NULL,
+  range text NOT NULL,
+  top_speed text NOT NULL,
+  charging_time text NOT NULL,
+  battery text NOT NULL,
+  acceleration text,
+  colors ARRAY DEFAULT '{}'::text[],
+  features ARRAY DEFAULT '{}'::text[],
+  specifications jsonb DEFAULT '{}'::jsonb,
+  description text,
+  image_url text,
+  gallery_images ARRAY DEFAULT '{}'::text[],
+  is_active boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT models_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.orders (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid,
+  model_id integer,
+  customer_name text NOT NULL,
+  customer_email text NOT NULL,
+  customer_phone text NOT NULL,
+  model_name text NOT NULL,
+  amount integer NOT NULL,
+  color text NOT NULL,
+  status USER-DEFINED DEFAULT 'pending'::order_status,
+  payment_status USER-DEFINED DEFAULT 'pending'::payment_status,
+  order_date date DEFAULT CURRENT_DATE,
+  delivery_address text NOT NULL,
+  tracking_number text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT orders_pkey PRIMARY KEY (id),
+  CONSTRAINT orders_model_id_fkey FOREIGN KEY (model_id) REFERENCES public.models(id),
+  CONSTRAINT orders_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.user_profiles(id)
+);
+CREATE TABLE public.test_ride_bookings (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid,
+  model_id integer,
+  dealer_id uuid,
+  customer_name text NOT NULL,
+  customer_email text NOT NULL,
+  customer_phone text NOT NULL,
+  city text NOT NULL,
+  dealer_name text NOT NULL,
+  preferred_date date NOT NULL,
+  time_slot text NOT NULL,
+  status USER-DEFINED DEFAULT 'pending'::booking_status,
+  booking_id text NOT NULL UNIQUE,
+  notes text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT test_ride_bookings_pkey PRIMARY KEY (id),
+  CONSTRAINT test_ride_bookings_model_id_fkey FOREIGN KEY (model_id) REFERENCES public.models(id),
+  CONSTRAINT test_ride_bookings_dealer_id_fkey FOREIGN KEY (dealer_id) REFERENCES public.dealers(id),
+  CONSTRAINT test_ride_bookings_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.user_profiles(id)
+);
+CREATE TABLE public.user_profiles (
+  id uuid NOT NULL,
+  email text NOT NULL UNIQUE,
+  user_type USER-DEFINED DEFAULT 'customer'::user_type,
+  full_name text NOT NULL,
+  phone text,
+  address text,
+  city text,
+  avatar_url text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT user_profiles_pkey PRIMARY KEY (id),
+  CONSTRAINT user_profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
+);

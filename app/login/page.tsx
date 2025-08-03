@@ -2,228 +2,377 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { useAuthContext } from "@/components/AuthProvider"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Eye, EyeOff, Loader2, Mail } from "lucide-react"
 
-export default function Login() {
-  const [isLogin, setIsLogin] = useState(true)
-  const [userType, setUserType] = useState("customer")
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-    confirmPassword: "",
-    name: "",
-  })
+export default function LoginPage() {
+  const [showPassword, setShowPassword] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [success, setSuccess] = useState("")
+  const [showEmailVerification, setShowEmailVerification] = useState(false)
+  const [signupEmail, setSignupEmailForVerification] = useState("")
+
+  // Login form
+  const [loginEmail, setLoginEmail] = useState("")
+  const [loginPassword, setLoginPassword] = useState("")
+
+  // Signup form
+  const [signupEmailInput, setSignupEmail] = useState("")
+  const [signupPassword, setSignupPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [fullName, setFullName] = useState("")
+  const [phone, setPhone] = useState("")
+
+  const { signIn, signUp, resendConfirmation, user, userProfile } = useAuthContext()
   const router = useRouter()
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    })
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user && userProfile) {
+      // Redirect based on user type
+      switch (userProfile.user_type) {
+        case "admin":
+          router.push("/admin/dashboard")
+          break
+        case "dealer":
+          router.push("/dealer/dashboard")
+          break
+        case "customer":
+          router.push("/customer/dashboard")
+          break
+        default:
+          router.push("/")
+      }
+    }
+  }, [user, userProfile, router])
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError("")
+
+    const { data, error } = await signIn(loginEmail, loginPassword)
+
+    if (error) {
+      setError(error.message)
+    } else if (data.user) {
+      // Redirect will be handled by useEffect above
+    }
+
+    setLoading(false)
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
+    setLoading(true)
+    setError("")
+    setSuccess("")
 
-    // Demo credentials
-    const demoCredentials = {
-      admin: { email: "admin@omnierride.com", password: "admin123" },
-      dealer: { email: "dealer@omnierride.com", password: "dealer123" },
-      customer: { email: "customer@omnierride.com", password: "customer123" },
+    // Validation
+    if (signupPassword !== confirmPassword) {
+      setError("Passwords do not match")
+      setLoading(false)
+      return
     }
 
-    if (isLogin) {
-      const credentials = demoCredentials[userType as keyof typeof demoCredentials]
-      if (formData.email === credentials.email && formData.password === credentials.password) {
-        // Store user type in localStorage for demo
-        localStorage.setItem("userType", userType)
-        localStorage.setItem("isLoggedIn", "true")
+    if (signupPassword.length < 6) {
+      setError("Password must be at least 6 characters long")
+      setLoading(false)
+      return
+    }
 
-        // Redirect based on user type
-        switch (userType) {
-          case "admin":
-            router.push("/admin/dashboard")
-            break
-          case "dealer":
-            router.push("/dealer/dashboard")
-            break
-          default:
-            router.push("/customer/dashboard")
-        }
-      } else {
-        alert(
-          "Invalid credentials! Use demo credentials:\nAdmin: admin@omnierride.com / admin123\nDealer: dealer@omnierride.com / dealer123\nCustomer: customer@omnierride.com / customer123",
-        )
-      }
+    const { data, error } = await signUp(signupEmailInput, signupPassword, fullName, phone)
+
+    if (error) {
+      setError(error.message)
     } else {
-      alert("Registration successful! Please login with your credentials.")
-      setIsLogin(true)
+      setSignupEmailForVerification(signupEmailInput)
+      setShowEmailVerification(true)
+      setSuccess("Please check your email and click the verification link to complete your registration.")
+      // Clear form
+      setSignupEmail("")
+      setSignupPassword("")
+      setConfirmPassword("")
+      setFullName("")
+      setPhone("")
     }
+
+    setLoading(false)
+  }
+
+  const handleResendConfirmation = async () => {
+    setLoading(true)
+    const { error } = await resendConfirmation(signupEmail)
+
+    if (error) {
+      setError(error.message)
+    } else {
+      setSuccess("Verification email sent! Please check your inbox.")
+    }
+
+    setLoading(false)
+  }
+
+  if (showEmailVerification) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-8">
+          <div className="text-center">
+            <Link href="/" className="text-3xl font-bold text-[#3CB043]">
+              OMNI E‑RIDE
+            </Link>
+          </div>
+
+          <Card>
+            <CardHeader className="text-center">
+              <div className="mx-auto flex items-center justify-center w-12 h-12 rounded-full bg-blue-100">
+                <Mail className="w-6 h-6 text-blue-600" />
+              </div>
+              <CardTitle>Check your email</CardTitle>
+              <CardDescription>
+                We've sent a verification link to <strong>{signupEmail}</strong>
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-gray-600 text-center">
+                Click the link in the email to verify your account and complete your registration.
+              </p>
+
+              {success && (
+                <Alert>
+                  <AlertDescription>{success}</AlertDescription>
+                </Alert>
+              )}
+
+              {error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
+              <div className="space-y-2">
+                <Button
+                  onClick={handleResendConfirmation}
+                  variant="outline"
+                  className="w-full bg-transparent"
+                  disabled={loading}
+                >
+                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Resend verification email
+                </Button>
+
+                <Button onClick={() => setShowEmailVerification(false)} variant="ghost" className="w-full">
+                  Back to signup
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <Link href="/" className="text-3xl font-bold text-[#3CB043]">
             OMNI E‑RIDE
           </Link>
-          <h2 className="mt-6 text-3xl font-bold text-[#1F2937]">{isLogin ? "Welcome Back" : "Create Account"}</h2>
-          <p className="mt-2 text-sm text-gray-600">
-            {isLogin ? "Sign in to your account" : "Join the Omni E-Ride family"}
-          </p>
+          <p className="mt-2 text-gray-600">Sign in to your account or create a new one</p>
         </div>
 
-        <div className="bg-white shadow-xl rounded-xl p-8">
-          {/* User Type Selection */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-[#1F2937] mb-2">Login As</label>
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                type="button"
-                onClick={() => setUserType("customer")}
-                className={`py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
-                  userType === "customer" ? "bg-[#3CB043] text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
-              >
-                Customer
-              </button>
-              <button
-                type="button"
-                onClick={() => setUserType("dealer")}
-                className={`py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
-                  userType === "dealer" ? "bg-[#3CB043] text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
-              >
-                Dealer
-              </button>
-              <button
-                type="button"
-                onClick={() => setUserType("admin")}
-                className={`py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
-                  userType === "admin" ? "bg-[#3CB043] text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
-              >
-                Admin
-              </button>
-            </div>
-          </div>
+        <Tabs defaultValue="login" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="login">Sign In</TabsTrigger>
+            <TabsTrigger value="signup">Sign Up</TabsTrigger>
+          </TabsList>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {!isLogin && (
-              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-[#1F2937] mb-2">
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required={!isLogin}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#3CB043] focus:border-transparent transition-colors"
-                  placeholder="Enter your full name"
-                />
-              </div>
-            )}
+          <TabsContent value="login">
+            <Card>
+              <CardHeader>
+                <CardTitle>Sign In</CardTitle>
+                <CardDescription>Enter your credentials to access your account</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleLogin} className="space-y-4">
+                  <div>
+                    <Label htmlFor="login-email">Email</Label>
+                    <Input
+                      id="login-email"
+                      type="email"
+                      value={loginEmail}
+                      onChange={(e) => setLoginEmail(e.target.value)}
+                      required
+                      placeholder="Enter your email"
+                    />
+                  </div>
 
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-[#1F2937] mb-2">
-                Email Address
-              </label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#3CB043] focus:border-transparent transition-colors"
-                placeholder="Enter your email"
-              />
-            </div>
+                  <div>
+                    <Label htmlFor="login-password">Password</Label>
+                    <div className="relative">
+                      <Input
+                        id="login-password"
+                        type={showPassword ? "text" : "password"}
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
+                        required
+                        placeholder="Enter your password"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </div>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-[#1F2937] mb-2">
-                Password
-              </label>
-              <input
-                type="password"
-                id="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#3CB043] focus:border-transparent transition-colors"
-                placeholder="Enter your password"
-              />
-            </div>
+                  {error && (
+                    <Alert variant="destructive">
+                      <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                  )}
 
-            {!isLogin && (
-              <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-[#1F2937] mb-2">
-                  Confirm Password
-                </label>
-                <input
-                  type="password"
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  required={!isLogin}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#3CB043] focus:border-transparent transition-colors"
-                  placeholder="Confirm your password"
-                />
-              </div>
-            )}
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Sign In
+                  </Button>
+                </form>
 
-            <button
-              type="submit"
-              className="w-full bg-[#3CB043] text-white font-semibold py-3 px-6 rounded-xl hover:bg-[#2D7A32] transition-colors"
-            >
-              {isLogin ? "Sign In" : "Create Account"}
-            </button>
-          </form>
+                <div className="mt-4 text-center">
+                  <p className="text-sm text-gray-600">Demo Accounts:</p>
+                  <div className="text-xs text-gray-500 mt-2 space-y-1">
+                    <p>Admin: admin@omnierride.com / admin123</p>
+                    <p>Dealer: dealer@omnierride.com / dealer123</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-          {/* Demo Credentials */}
-          <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-            <h4 className="text-sm font-medium text-blue-900 mb-2">Demo Credentials:</h4>
-            <div className="text-xs text-blue-800 space-y-1">
-              <p>
-                <strong>Admin:</strong> admin@omnierride.com / admin123
-              </p>
-              <p>
-                <strong>Dealer:</strong> dealer@omnierride.com / dealer123
-              </p>
-              <p>
-                <strong>Customer:</strong> customer@omnierride.com / customer123
-              </p>
-            </div>
-          </div>
+          <TabsContent value="signup">
+            <Card>
+              <CardHeader>
+                <CardTitle>Create Customer Account</CardTitle>
+                <CardDescription>Sign up for a new customer account with email verification</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSignup} className="space-y-4">
+                  <div>
+                    <Label htmlFor="signup-name">Full Name</Label>
+                    <Input
+                      id="signup-name"
+                      type="text"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      required
+                      placeholder="Enter your full name"
+                    />
+                  </div>
 
-          {isLogin && (
-            <div className="text-center mt-4">
-              <a href="#" className="text-[#3CB043] hover:text-[#2D7A32] transition-colors text-sm">
-                Forgot your password?
-              </a>
-            </div>
-          )}
+                  <div>
+                    <Label htmlFor="signup-email">Email</Label>
+                    <Input
+                      id="signup-email"
+                      type="email"
+                      value={signupEmailInput}
+                      onChange={(e) => setSignupEmail(e.target.value)}
+                      required
+                      placeholder="Enter your email"
+                    />
+                  </div>
 
-          <div className="text-center mt-6 pt-6 border-t border-gray-200">
-            <p className="text-gray-600">
-              {isLogin ? "Don't have an account?" : "Already have an account?"}
-              <button
-                type="button"
-                onClick={() => setIsLogin(!isLogin)}
-                className="text-[#3CB043] hover:text-[#2D7A32] transition-colors font-medium ml-1"
-              >
-                {isLogin ? "Sign up" : "Sign in"}
-              </button>
-            </p>
-          </div>
+                  <div>
+                    <Label htmlFor="signup-phone">Phone Number</Label>
+                    <Input
+                      id="signup-phone"
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="Enter your phone number"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="signup-password">Password</Label>
+                    <div className="relative">
+                      <Input
+                        id="signup-password"
+                        type={showPassword ? "text" : "password"}
+                        value={signupPassword}
+                        onChange={(e) => setSignupPassword(e.target.value)}
+                        required
+                        placeholder="Create a password"
+                        minLength={6}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="confirm-password">Confirm Password</Label>
+                    <Input
+                      id="confirm-password"
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      required
+                      placeholder="Confirm your password"
+                    />
+                  </div>
+
+                  {error && (
+                    <Alert variant="destructive">
+                      <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                  )}
+
+                  {success && (
+                    <Alert>
+                      <AlertDescription>{success}</AlertDescription>
+                    </Alert>
+                  )}
+
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Create Account
+                  </Button>
+                </form>
+
+                <p className="mt-4 text-xs text-gray-500 text-center">
+                  By signing up, you agree to receive email verification. Customer accounts require email verification.
+                </p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+
+        <div className="text-center">
+          <Link href="/" className="text-sm text-[#3CB043] hover:underline">
+            ← Back to Homepage
+          </Link>
         </div>
       </div>
     </div>

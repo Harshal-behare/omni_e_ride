@@ -1,56 +1,53 @@
-import Navbar from "../../components/Navbar"
-import ModelCard from "../../components/ModelCard"
-import Footer from "../../components/Footer"
+"use client"
 
-const models = [
-  {
-    id: 1,
-    name: "Omni Swift",
-    price: 63000,
-    range: "80 km",
-    topSpeed: "45 km/h",
-    chargingTime: "4-5 hours",
-    battery: "48V 24Ah",
-  },
-  {
-    id: 2,
-    name: "Omni Power",
-    price: 78000,
-    range: "100 km",
-    topSpeed: "60 km/h",
-    chargingTime: "5-6 hours",
-    battery: "60V 30Ah",
-  },
-  {
-    id: 3,
-    name: "Omni Elite",
-    price: 95000,
-    range: "120 km",
-    topSpeed: "70 km/h",
-    chargingTime: "6-7 hours",
-    battery: "72V 35Ah",
-  },
-  {
-    id: 4,
-    name: "Omni Pro",
-    price: 110000,
-    range: "150 km",
-    topSpeed: "80 km/h",
-    chargingTime: "7-8 hours",
-    battery: "72V 40Ah",
-  },
-  {
-    id: 5,
-    name: "Omni Max",
-    price: 125000,
-    range: "180 km",
-    topSpeed: "90 km/h",
-    chargingTime: "8-9 hours",
-    battery: "84V 45Ah",
-  },
-]
+import { useEffect } from "react"
+import Navbar from "../../components/Navbar"
+import Footer from "../../components/Footer"
+import { useModels } from "@/hooks/useModels"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Loader2, Battery, Zap, Clock, Gauge } from "lucide-react"
+import Link from "next/link"
+import Image from "next/image"
 
 export default function Models() {
+  const { models, loading, error, fetchModels } = useModels()
+
+  useEffect(() => {
+    fetchModels()
+  }, [])
+
+  if (loading) {
+    return (
+      <>
+        <Navbar />
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <p>Loading models...</p>
+          </div>
+        </div>
+        <Footer />
+      </>
+    )
+  }
+
+  if (error) {
+    return (
+      <>
+        <Navbar />
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-red-600 mb-4">Error loading models: {error}</p>
+            <Button onClick={fetchModels}>Try Again</Button>
+          </div>
+        </div>
+        <Footer />
+      </>
+    )
+  }
+
   return (
     <>
       <Navbar />
@@ -60,31 +57,136 @@ export default function Models() {
           <div className="text-center mb-12">
             <h1 className="text-4xl md:text-5xl font-bold text-[#1F2937] mb-4">Our Electric Scooter Models</h1>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Discover our complete range of premium electric scooters designed for every lifestyle and budget.
-              Experience the perfect blend of performance, style, and sustainability.
+              Discover our range of eco-friendly electric scooters designed for modern urban mobility. Each model
+              combines cutting-edge technology with sustainable transportation.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {models.map((model) => (
-              <ModelCard key={model.id} model={model} />
-            ))}
-          </div>
+          {models.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-600 text-lg">No models available at the moment. Please check back later.</p>
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {models.map((model) => (
+                <Card key={model.id} className="hover:shadow-xl transition-all duration-300 overflow-hidden">
+                  <div className="relative h-64 bg-gray-100">
+                    <Image
+                      src={
+                        model.image_url ||
+                        `/placeholder.svg?height=300&width=400&text=${encodeURIComponent(model.name)}`
+                      }
+                      alt={model.name}
+                      fill
+                      className="object-cover"
+                    />
+                    <div className="absolute top-4 right-4">
+                      <Badge className="bg-[#3CB043] text-white">₹{model.price.toLocaleString()}</Badge>
+                    </div>
+                  </div>
 
-          <div className="text-center mt-12">
-            <div className="bg-white shadow-xl rounded-xl p-8 max-w-2xl mx-auto">
-              <h3 className="text-2xl font-bold mb-4">Need Help Choosing?</h3>
-              <p className="text-gray-600 mb-6">
-                Our experts are here to help you find the perfect electric scooter for your needs and budget.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <button className="bg-[#3CB043] text-white font-semibold py-3 px-6 rounded-xl hover:bg-[#2D7A32] transition-colors">
-                  Schedule Consultation
-                </button>
-                <button className="bg-white text-[#3CB043] border-2 border-[#3CB043] font-medium py-3 px-6 rounded-xl hover:bg-[#3CB043] hover:text-white transition-colors">
-                  Compare Models
-                </button>
-              </div>
+                  <CardHeader>
+                    <CardTitle className="text-xl text-[#1F2937]">{model.name}</CardTitle>
+                    <p className="text-gray-600 text-sm line-clamp-2">{model.description}</p>
+                  </CardHeader>
+
+                  <CardContent className="space-y-4">
+                    {/* Key Specifications */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex items-center space-x-2">
+                        <Battery className="h-4 w-4 text-[#3CB043]" />
+                        <div>
+                          <p className="text-xs text-gray-500">Range</p>
+                          <p className="text-sm font-medium">{model.range}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <Gauge className="h-4 w-4 text-[#3CB043]" />
+                        <div>
+                          <p className="text-xs text-gray-500">Top Speed</p>
+                          <p className="text-sm font-medium">{model.top_speed}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <Clock className="h-4 w-4 text-[#3CB043]" />
+                        <div>
+                          <p className="text-xs text-gray-500">Charging</p>
+                          <p className="text-sm font-medium">{model.charging_time}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <Zap className="h-4 w-4 text-[#3CB043]" />
+                        <div>
+                          <p className="text-xs text-gray-500">Battery</p>
+                          <p className="text-sm font-medium">{model.battery}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Features */}
+                    {model.features && model.features.length > 0 && (
+                      <div>
+                        <p className="text-sm font-medium text-gray-700 mb-2">Key Features:</p>
+                        <div className="flex flex-wrap gap-1">
+                          {model.features.slice(0, 3).map((feature, index) => (
+                            <Badge key={index} variant="outline" className="text-xs">
+                              {feature}
+                            </Badge>
+                          ))}
+                          {model.features.length > 3 && (
+                            <Badge variant="outline" className="text-xs">
+                              +{model.features.length - 3} more
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Colors */}
+                    {model.colors && model.colors.length > 0 && (
+                      <div>
+                        <p className="text-sm font-medium text-gray-700 mb-2">Available Colors:</p>
+                        <div className="flex flex-wrap gap-1">
+                          {model.colors.map((color, index) => (
+                            <Badge key={index} variant="secondary" className="text-xs">
+                              {color}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Action Buttons */}
+                    <div className="flex space-x-2 pt-4">
+                      <Link href={`/models/${model.id}`} className="flex-1">
+                        <Button variant="outline" className="w-full bg-transparent">
+                          View Details
+                        </Button>
+                      </Link>
+                      <Button className="flex-1 bg-[#3CB043] hover:bg-[#2D7A32]">Book Test Ride</Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {/* Call to Action */}
+          <div className="text-center mt-16">
+            <h2 className="text-2xl font-bold text-[#1F2937] mb-4">Ready to Go Electric?</h2>
+            <p className="text-gray-600 mb-8">
+              Experience the future of transportation with our eco-friendly electric scooters
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button size="lg" className="bg-[#3CB043] hover:bg-[#2D7A32]">
+                Schedule Test Ride
+              </Button>
+              <Button size="lg" variant="outline">
+                Find Nearest Dealer
+              </Button>
             </div>
           </div>
         </div>

@@ -1,192 +1,322 @@
+"use client"
 import Navbar from "../components/Navbar"
 import Hero from "../components/Hero"
-import ModelCard from "../components/ModelCard"
-import OfferBanner from "../components/OfferBanner"
-import TestimonialCard from "../components/TestimonialCard"
-import ContactForm from "../components/ContactForm"
 import Footer from "../components/Footer"
-import CostSavingsCalculator from "../components/CostSavingsCalculator"
-
-const models = [
-  {
-    id: 1,
-    name: "Omni Swift",
-    price: 63000,
-    range: "80 km",
-    topSpeed: "45 km/h",
-    chargingTime: "4-5 hours",
-    battery: "48V 24Ah",
-  },
-  {
-    id: 2,
-    name: "Omni Power",
-    price: 78000,
-    range: "100 km",
-    topSpeed: "60 km/h",
-    chargingTime: "5-6 hours",
-    battery: "60V 30Ah",
-  },
-  {
-    id: 3,
-    name: "Omni Elite",
-    price: 95000,
-    range: "120 km",
-    topSpeed: "70 km/h",
-    chargingTime: "6-7 hours",
-    battery: "72V 35Ah",
-  },
-  {
-    id: 4,
-    name: "Omni Pro",
-    price: 110000,
-    range: "150 km",
-    topSpeed: "80 km/h",
-    chargingTime: "7-8 hours",
-    battery: "72V 40Ah",
-  },
-  {
-    id: 5,
-    name: "Omni Max",
-    price: 125000,
-    range: "180 km",
-    topSpeed: "90 km/h",
-    chargingTime: "8-9 hours",
-    battery: "84V 45Ah",
-  },
-]
-
-const testimonials = [
-  {
-    id: 1,
-    name: "Rajesh Kumar",
-    location: "Patna, Bihar",
-    quote:
-      "Amazing experience with Omni E-Ride! Zero maintenance cost and excellent performance. Highly recommended for daily commute.",
-  },
-  {
-    id: 2,
-    name: "Priya Singh",
-    location: "Gaya, Bihar",
-    quote:
-      "Love my Omni Swift! It's eco-friendly, cost-effective, and perfect for city rides. Great customer service too.",
-  },
-  {
-    id: 3,
-    name: "Amit Sharma",
-    location: "Muzaffarpur, Bihar",
-    quote: "Best investment I made this year. The battery life is excellent and charging is so convenient at home.",
-  },
-]
+import WhatsAppButton from "../components/WhatsAppButton"
+import { useModels } from "@/hooks/useModels"
+import { useDealers } from "@/hooks/useDealers"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Battery, Zap, Clock, Gauge, MapPin, Phone, Star, Users, Award, Leaf } from "lucide-react"
+import Link from "next/link"
+import Image from "next/image"
 
 export default function Home() {
+  const { models, loading: modelsLoading } = useModels()
+  const { dealers, loading: dealersLoading } = useDealers()
+
+  // Get featured models (first 3)
+  const featuredModels = models.slice(0, 3)
+
+  // Get featured dealers (first 3 active dealers)
+  const featuredDealers = dealers.filter((d) => d.status === "active").slice(0, 3)
+
   return (
     <>
       <Navbar />
       <Hero />
 
-      {/* Models Section */}
-      <section className="py-24">
+      {/* Featured Models Section */}
+      <section className="py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-[#1F2937] mb-4">Our Electric Scooter Models</h2>
-            <p className="text-lg text-gray-600">
-              Choose from our range of premium electric scooters designed for every need
+            <h2 className="text-3xl md:text-4xl font-bold text-[#1F2937] mb-4">Featured Models</h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Discover our most popular electric scooters designed for modern urban mobility
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {models.map((model) => (
-              <ModelCard key={model.id} model={model} />
-            ))}
+          {modelsLoading ? (
+            <div className="grid md:grid-cols-3 gap-8">
+              {[1, 2, 3].map((i) => (
+                <Card key={i} className="animate-pulse">
+                  <div className="h-48 bg-gray-200 rounded-t-lg"></div>
+                  <CardContent className="p-6">
+                    <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                    <div className="h-3 bg-gray-200 rounded mb-4"></div>
+                    <div className="space-y-2">
+                      <div className="h-3 bg-gray-200 rounded"></div>
+                      <div className="h-3 bg-gray-200 rounded"></div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : featuredModels.length > 0 ? (
+            <div className="grid md:grid-cols-3 gap-8">
+              {featuredModels.map((model) => (
+                <Card key={model.id} className="hover:shadow-xl transition-all duration-300 overflow-hidden">
+                  <div className="relative h-48 bg-gray-100">
+                    <Image
+                      src={
+                        model.image_url ||
+                        `/placeholder.svg?height=300&width=400&text=${encodeURIComponent(model.name)}`
+                      }
+                      alt={model.name}
+                      fill
+                      className="object-cover"
+                    />
+                    <div className="absolute top-4 right-4">
+                      <Badge className="bg-[#3CB043] text-white">₹{model.price.toLocaleString()}</Badge>
+                    </div>
+                  </div>
+
+                  <CardContent className="p-6">
+                    <h3 className="text-xl font-bold text-[#1F2937] mb-2">{model.name}</h3>
+                    <p className="text-gray-600 text-sm mb-4 line-clamp-2">{model.description}</p>
+
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                      <div className="flex items-center space-x-2">
+                        <Battery className="h-4 w-4 text-[#3CB043]" />
+                        <span className="text-sm">{model.range}</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Gauge className="h-4 w-4 text-[#3CB043]" />
+                        <span className="text-sm">{model.top_speed}</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Clock className="h-4 w-4 text-[#3CB043]" />
+                        <span className="text-sm">{model.charging_time}</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Zap className="h-4 w-4 text-[#3CB043]" />
+                        <span className="text-sm">{model.battery}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex space-x-2">
+                      <Link href={`/models/${model.id}`} className="flex-1">
+                        <Button variant="outline" className="w-full bg-transparent">
+                          View Details
+                        </Button>
+                      </Link>
+                      <Button className="flex-1 bg-[#3CB043] hover:bg-[#2D7A32]">Test Ride</Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-gray-600">No models available at the moment.</p>
+            </div>
+          )}
+
+          <div className="text-center mt-12">
+            <Link href="/models">
+              <Button size="lg" variant="outline">
+                View All Models
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
 
-      {/* Cost Savings Calculator */}
-      <CostSavingsCalculator />
-
-      {/* Why Choose Section */}
-      <section className="py-24 bg-gray-50">
+      {/* Why Choose Us Section */}
+      <section className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-[#1F2937] mb-4">Why Choose Omni E-Ride?</h2>
-            <p className="text-lg text-gray-600">Experience the benefits of sustainable mobility</p>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Leading the electric revolution in Bihar with innovative technology and exceptional service
+            </p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             <div className="text-center">
               <div className="w-16 h-16 bg-[#3CB043] rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
+                <Leaf className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">Zero Emissions</h3>
-              <p className="text-gray-600">100% electric, 0% pollution. Contribute to a cleaner environment.</p>
+              <h3 className="text-xl font-semibold mb-2">Eco-Friendly</h3>
+              <p className="text-gray-600">Zero emissions, sustainable transportation for a cleaner environment</p>
             </div>
 
             <div className="text-center">
               <div className="w-16 h-16 bg-[#3CB043] rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
-                  />
-                </svg>
+                <Zap className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">Low Running Cost</h3>
-              <p className="text-gray-600">Save up to 80% on fuel costs with our efficient electric motors.</p>
+              <h3 className="text-xl font-semibold mb-2">Advanced Technology</h3>
+              <p className="text-gray-600">Cutting-edge battery technology and smart features</p>
             </div>
 
             <div className="text-center">
               <div className="w-16 h-16 bg-[#3CB043] rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
+                <Award className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">Fast Charging</h3>
-              <p className="text-gray-600">Quick charge technology for minimal downtime and maximum mobility.</p>
+              <h3 className="text-xl font-semibold mb-2">Quality Assured</h3>
+              <p className="text-gray-600">Premium build quality with comprehensive warranty</p>
             </div>
 
             <div className="text-center">
               <div className="w-16 h-16 bg-[#3CB043] rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
+                <Users className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">Reliable Service</h3>
-              <p className="text-gray-600">Comprehensive warranty and service support across Bihar.</p>
+              <h3 className="text-xl font-semibold mb-2">Expert Support</h3>
+              <p className="text-gray-600">Dedicated customer service and maintenance support</p>
             </div>
           </div>
         </div>
       </section>
 
-      <OfferBanner />
+      {/* Dealers Section */}
+      <section className="py-20 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-[#1F2937] mb-4">Our Authorized Dealers</h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Visit our trusted dealers across Bihar for test rides and expert guidance
+            </p>
+          </div>
+
+          {dealersLoading ? (
+            <div className="grid md:grid-cols-3 gap-8">
+              {[1, 2, 3].map((i) => (
+                <Card key={i} className="animate-pulse">
+                  <CardContent className="p-6">
+                    <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                    <div className="h-3 bg-gray-200 rounded mb-4"></div>
+                    <div className="space-y-2">
+                      <div className="h-3 bg-gray-200 rounded"></div>
+                      <div className="h-3 bg-gray-200 rounded"></div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : featuredDealers.length > 0 ? (
+            <div className="grid md:grid-cols-3 gap-8">
+              {featuredDealers.map((dealer) => (
+                <Card key={dealer.id} className="hover:shadow-lg transition-all duration-300">
+                  <CardHeader>
+                    <CardTitle className="text-lg text-[#1F2937]">{dealer.name}</CardTitle>
+                    <p className="text-sm text-gray-600">{dealer.location}</p>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex items-start space-x-2">
+                      <MapPin className="h-4 w-4 text-gray-500 mt-1 flex-shrink-0" />
+                      <p className="text-sm text-gray-600">{dealer.address}</p>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Phone className="h-4 w-4 text-[#3CB043]" />
+                      <a href={`tel:${dealer.phone}`} className="text-sm text-[#3CB043] hover:underline">
+                        {dealer.phone}
+                      </a>
+                    </div>
+
+                    <div className="pt-2">
+                      <Badge variant="outline" className="text-xs">
+                        Manager: {dealer.manager_name}
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-gray-600">No dealers available at the moment.</p>
+            </div>
+          )}
+
+          <div className="text-center mt-12">
+            <Link href="/dealers">
+              <Button size="lg" variant="outline">
+                View All Dealers
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
 
       {/* Testimonials Section */}
-      <section className="py-24">
+      <section className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-[#1F2937] mb-4">What Our Customers Say</h2>
-            <p className="text-lg text-gray-600">Real experiences from satisfied Omni E-Ride owners</p>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Real experiences from satisfied Omni E-Ride customers across Bihar
+            </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {testimonials.map((testimonial) => (
-              <TestimonialCard key={testimonial.id} testimonial={testimonial} />
+          <div className="grid md:grid-cols-3 gap-8">
+            {[
+              {
+                name: "Rajesh Kumar",
+                location: "Patna",
+                rating: 5,
+                comment:
+                  "Excellent scooter! Great range and very comfortable for daily commuting. The charging is super convenient.",
+              },
+              {
+                name: "Priya Singh",
+                location: "Gaya",
+                rating: 5,
+                comment:
+                  "Love my Omni E-Ride! It's eco-friendly, cost-effective, and the service support is outstanding.",
+              },
+              {
+                name: "Amit Sharma",
+                location: "Muzaffarpur",
+                rating: 5,
+                comment:
+                  "Best investment I've made. No more fuel costs and it's so smooth to ride. Highly recommended!",
+              },
+            ].map((testimonial, index) => (
+              <Card key={index} className="hover:shadow-lg transition-all duration-300">
+                <CardContent className="p-6">
+                  <div className="flex items-center mb-4">
+                    {[...Array(testimonial.rating)].map((_, i) => (
+                      <Star key={i} className="h-4 w-4 text-yellow-400 fill-current" />
+                    ))}
+                  </div>
+                  <p className="text-gray-600 mb-4 italic">"{testimonial.comment}"</p>
+                  <div>
+                    <p className="font-semibold text-[#1F2937]">{testimonial.name}</p>
+                    <p className="text-sm text-gray-500">{testimonial.location}</p>
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
         </div>
       </section>
 
-      <ContactForm />
+      {/* CTA Section */}
+      <section className="py-20 bg-[#3CB043]">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Ready to Go Electric?</h2>
+          <p className="text-xl text-green-100 mb-8">
+            Join thousands of satisfied customers who have made the switch to sustainable transportation
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button size="lg" className="bg-white text-[#3CB043] hover:bg-gray-100">
+              Schedule Test Ride
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              className="border-white text-white hover:bg-white hover:text-[#3CB043] bg-transparent"
+            >
+              View All Models
+            </Button>
+          </div>
+        </div>
+      </section>
+
       <Footer />
+      <WhatsAppButton />
     </>
   )
 }
