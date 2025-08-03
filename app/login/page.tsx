@@ -2,8 +2,8 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect, Suspense } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/hooks/useAuth"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -14,9 +14,17 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, Mail, Lock, User, Phone, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter()
-  const { user, userProfile, signIn, signUp, loading: authLoading } = useAuth()
+  const searchParams = useSearchParams()
+  const { 
+    user, 
+    userProfile, 
+    signIn, 
+    signUp, 
+    loading: authLoading 
+  } = useAuth()
+  
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
@@ -36,6 +44,14 @@ export default function LoginPage() {
     fullName: "",
     phone: "",
   })
+
+  // Check for error messages from URL params
+  useEffect(() => {
+    const errorParam = searchParams.get('error')
+    if (errorParam) {
+      setError(decodeURIComponent(errorParam))
+    }
+  }, [searchParams])
 
   // Redirect if already logged in
   useEffect(() => {
@@ -65,16 +81,15 @@ export default function LoginPage() {
       const { data, error } = await signIn(loginData.email, loginData.password)
 
       if (error) {
-        setError(error.message)
+        setError(typeof error === 'object' && error !== null && 'message' in error ? String(error.message) : "Login failed")
         return
       }
 
       if (data?.user) {
-        // The useEffect above will handle the redirect
         setSuccess("Login successful! Redirecting...")
       }
-    } catch (err) {
-      setError("An unexpected error occurred")
+    } catch (err: any) {
+      setError(typeof err === 'object' && err !== null && 'message' in err ? String(err.message) : "An unexpected error occurred")
     } finally {
       setLoading(false)
     }
@@ -101,7 +116,7 @@ export default function LoginPage() {
       const { data, error } = await signUp(signupData.email, signupData.password, signupData.fullName, signupData.phone)
 
       if (error) {
-        setError(error.message)
+        setError(typeof error === 'object' && error !== null && 'message' in error ? String(error.message) : "Signup failed")
         return
       }
 
@@ -115,8 +130,8 @@ export default function LoginPage() {
           phone: "",
         })
       }
-    } catch (err) {
-      setError("An unexpected error occurred")
+    } catch (err: any) {
+      setError(typeof err === 'object' && err !== null && 'message' in err ? String(err.message) : "An unexpected error occurred")
     } finally {
       setLoading(false)
     }
@@ -332,5 +347,20 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p>Loading...</p>
+        </div>
+      </div>
+    }>
+      <LoginPageContent />
+    </Suspense>
   )
 }

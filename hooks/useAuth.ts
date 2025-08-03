@@ -68,8 +68,43 @@ export function useAuth() {
     }
   }
 
+  const signInWithOtp = async (email: string) => {
+    try {
+      const { data, error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      })
+      return { data, error }
+    } catch (error) {
+      return { data: null, error }
+    }
+  }
+
+  const verifyOtp = async (email: string, token: string) => {
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({
+        email,
+        token,
+        type: 'email',
+      })
+      return { data, error }
+    } catch (error) {
+      return { data: null, error }
+    }
+  }
+
   const signUp = async (email: string, password: string, fullName: string, phone?: string) => {
     try {
+      // Check if email is pre-approved
+      const { data: preApprovedData } = await supabase
+        .from("pre_approved_emails")
+        .select("role")
+        .eq("email", email)
+        .eq("used", false)
+        .single()
+
       // Sign up with email confirmation required
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -78,7 +113,38 @@ export function useAuth() {
           data: {
             full_name: fullName,
             phone: phone || "",
+            role: preApprovedData?.role || "customer",
           },
+        },
+      })
+
+      if (error) throw error
+
+      return { data, error: null }
+    } catch (error) {
+      return { data: null, error }
+    }
+  }
+
+  const signUpWithOtp = async (email: string, fullName: string, phone?: string) => {
+    try {
+      // Check if email is pre-approved
+      const { data: preApprovedData } = await supabase
+        .from("pre_approved_emails")
+        .select("role")
+        .eq("email", email)
+        .eq("used", false)
+        .single()
+
+      const { data, error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          data: {
+            full_name: fullName,
+            phone: phone || "",
+            role: preApprovedData?.role || "customer",
+          },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       })
 
@@ -123,15 +189,31 @@ export function useAuth() {
     }
   }
 
+  const resendOtp = async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email,
+      })
+      return { error }
+    } catch (error) {
+      return { error }
+    }
+  }
+
   return {
     user,
     userProfile,
     loading,
     signIn,
+    signInWithOtp,
+    verifyOtp,
     signUp,
+    signUpWithOtp,
     signOut,
     updateProfile,
     resendConfirmation,
+    resendOtp,
     refetchProfile: () => user && fetchUserProfile(user.id),
   }
 }

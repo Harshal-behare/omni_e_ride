@@ -15,12 +15,10 @@ import Footer from "../../components/Footer"
 
 interface PublicDealer {
   id: string
-  name: string
-  location: string
-  address: string
+  business_name: string
+  business_address: string
   phone: string
   email: string
-  manager_name: string
   status: string
   created_at: string
 }
@@ -40,8 +38,8 @@ export default function DealersPage() {
       // Public query - no authentication required
       const { data, error: fetchError } = await supabase
         .from("dealers")
-        .select("id, name, location, address, phone, email, manager_name, status, created_at")
-        .eq("status", "active")
+        .select("id, business_name, business_address, phone, email, status, created_at")
+        .eq("status", "approved")
         .order("created_at", { ascending: false })
 
       if (fetchError) {
@@ -63,16 +61,20 @@ export default function DealersPage() {
 
   const filteredDealers = dealers.filter((dealer) => {
     const matchesSearch =
-      dealer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      dealer.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      dealer.manager_name.toLowerCase().includes(searchTerm.toLowerCase())
+      dealer.business_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      dealer.business_address.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      dealer.email.toLowerCase().includes(searchTerm.toLowerCase())
 
-    const matchesCity = selectedCity === "" || dealer.location.toLowerCase().includes(selectedCity.toLowerCase())
+    const matchesCity = selectedCity === "" || dealer.business_address.toLowerCase().includes(selectedCity.toLowerCase())
 
     return matchesSearch && matchesCity
   })
 
-  const cities = Array.from(new Set(dealers.map((dealer) => dealer.location))).sort()
+  const cities = Array.from(new Set(dealers.map((dealer) => {
+    // Extract city from business_address (simple approach)
+    const addressParts = dealer.business_address.split(',').map(part => part.trim())
+    return addressParts[addressParts.length - 2] || addressParts[addressParts.length - 1] || 'Unknown'
+  }))).sort()
 
   if (loading) {
     return (
@@ -228,10 +230,10 @@ export default function DealersPage() {
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div>
-                        <CardTitle className="text-lg font-bold text-gray-900">{dealer.name}</CardTitle>
+                        <CardTitle className="text-lg font-bold text-gray-900">{dealer.business_name}</CardTitle>
                         <CardDescription className="flex items-center mt-1">
                           <MapPin className="h-4 w-4 mr-1" />
-                          {dealer.location}
+                          {dealer.business_address.split(',').slice(-2).join(', ')}
                         </CardDescription>
                       </div>
                       <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
@@ -244,8 +246,8 @@ export default function DealersPage() {
                     <div className="space-y-3">
                       <div className="flex items-center text-sm text-gray-600">
                         <User className="h-4 w-4 mr-2 text-gray-400" />
-                        <span className="font-medium">Manager:</span>
-                        <span className="ml-1">{dealer.manager_name}</span>
+                        <span className="font-medium">Status:</span>
+                        <span className="ml-1 capitalize">{dealer.status}</span>
                       </div>
 
                       <div className="flex items-center text-sm text-gray-600">
@@ -264,7 +266,7 @@ export default function DealersPage() {
 
                       <div className="flex items-start text-sm text-gray-600">
                         <MapPin className="h-4 w-4 mr-2 text-gray-400 mt-0.5" />
-                        <span>{dealer.address}</span>
+                        <span>{dealer.business_address}</span>
                       </div>
                     </div>
 
@@ -272,7 +274,7 @@ export default function DealersPage() {
                       <Button
                         className="flex-1"
                         size="sm"
-                        onClick={() => window.open(`https://maps.google.com/?q=${encodeURIComponent(dealer.address)}`)}
+                        onClick={() => window.open(`https://maps.google.com/?q=${encodeURIComponent(dealer.business_address)}`)}
                       >
                         <Navigation className="h-4 w-4 mr-1" />
                         Directions

@@ -1,362 +1,401 @@
 "use client"
 
-import type React from "react"
-
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { useAuthContext } from "@/components/AuthProvider"
+import { useAuth } from "@/hooks/useAuth"
 import { useAdminActions } from "@/hooks/useAdminActions"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Skeleton } from "@/components/ui/skeleton"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import {
-  Loader2,
-  Plus,
-  Users,
-  ShoppingCart,
-  TrendingUp,
-  Mail,
-  Settings,
-  BarChart3,
-  MessageSquare,
-  Crown,
-  Store,
-  LogOut,
-  Trash2,
-  CheckCircle,
-  XCircle,
+  Users, Building2, ShoppingCart, DollarSign, Shield, Star, Plus, Edit, CheckCircle, XCircle, AlertCircle, Wrench, FileText
 } from "lucide-react"
+import { supabase } from "@/lib/supabase"
 
 export default function AdminDashboard() {
-  const { user, userProfile, loading: authLoading, signOut } = useAuthContext()
-  const {
-    loading: adminLoading,
-    addPreApprovedEmail,
-    getPreApprovedEmails,
-    removePreApprovedEmail,
-    updateUserRole,
-    getAllUsers,
-    getDashboardStats,
-  } = useAdminActions()
-  const router = useRouter()
-
-  const [stats, setStats] = useState<any>(null)
-  const [users, setUsers] = useState<any[]>([])
-  const [preApprovedEmails, setPreApprovedEmails] = useState<any[]>([])
-
-  // Add email form
-  const [showAddEmail, setShowAddEmail] = useState(false)
+  const { userProfile } = useAuth()
+  const { addPreApprovedEmail, updateUserRole } = useAdminActions()
+  
+  const [activeTab, setActiveTab] = useState("overview")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+  
+  // Data states
+  const [users, setUsers] = useState([])
+  const [dealers, setDealers] = useState([])
+  const [orders, setOrders] = useState([])
+  const [applications, setApplications] = useState([])
+  const [preApprovedEmails, setPreApprovedEmails] = useState([])
+  const [serviceBookings, setServiceBookings] = useState([])
+  const [warranties, setWarranties] = useState([])
+  const [transactions, setTransactions] = useState([])
+  const [reviews, setReviews] = useState([])
+  
+  // Form states
   const [newEmail, setNewEmail] = useState("")
-  const [newRole, setNewRole] = useState<"admin" | "dealer">("dealer")
-  const [error, setError] = useState("")
-  const [success, setSuccess] = useState("")
+  const [newEmailRole, setNewEmailRole] = useState("customer")
+  const [selectedUser, setSelectedUser] = useState(null)
+  const [newRole, setNewRole] = useState("customer")
+
+  // Stats
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    totalDealers: 0,
+    totalOrders: 0,
+    totalRevenue: 0,
+    pendingApplications: 0,
+    activeWarranties: 0,
+    pendingServiceBookings: 0,
+    averageRating: 0
+  })
 
   useEffect(() => {
-    if (!authLoading && (!user || userProfile?.user_type !== "admin")) {
-      router.push("/login")
+    if (userProfile?.user_type === "admin") {
+      fetchAllData()
+    }
+  }, [userProfile])
+
+  const fetchAllData = async () => {
+    setLoading(true)
+    try {
+      const [
+        { data: usersData },
+        { data: dealersData },
+        { data: ordersData },
+        { data: applicationsData },
+        { data: emailsData },
+        { data: serviceBookingsData },
+        { data: warrantiesData },
+        { data: transactionsData },
+        { data: reviewsData }
+      ] = await Promise.all([
+        supabase.from("user_profiles").select("*").order("created_at", { ascending: false }),
+        supabase.from("dealers").select("*").order("created_at", { ascending: false }),
+        supabase.from("orders").select("*").order("created_at", { ascending: false }),
+        supabase.from("dealer_applications").select("*").order("created_at", { ascending: false }),
+        supabase.from("pre_approved_emails").select("*").order("created_at", { ascending: false }),
+        supabase.from("service_bookings").select("*").order("created_at", { ascending: false }),
+        supabase.from("warranties").select("*").order("created_at", { ascending: false }),
+        supabase.from("financial_transactions").select("*").order("created_at", { ascending: false }),
+        supabase.from("customer_reviews").select("*").order("created_at", { ascending: false })
+      ])
+
+      setUsers(usersData || [])
+      setDealers(dealersData || [])
+      setOrders(ordersData || [])
+      setApplications(applicationsData || [])
+      setPreApprovedEmails(emailsData || [])
+      setServiceBookings(serviceBookingsData || [])
+      setWarranties(warrantiesData || [])
+      setTransactions(transactionsData || [])
+      setReviews(reviewsData || [])
+
+      // Calculate stats
+      const totalRevenue = (transactionsData || [])
+        .filter(t => t.transaction_type === 'sale' && t.status === 'completed')
+        .reduce((sum, t) => sum + t.amount, 0)
+
+      const averageRating = (reviewsData || []).length > 0 
+        ? (reviewsData || []).reduce((sum, r) => sum + r.rating, 0) / (reviewsData || []).length
+        : 0
+
+      setStats({
+        totalUsers: usersData?.length || 0,
+        totalDealers: dealersData?.length || 0,
+        totalOrders: ordersData?.length || 0,
+        totalRevenue,
+        pendingApplications: (applicationsData || []).filter(a => a.status === 'pending').length,
+        activeWarranties: (warrantiesData || []).filter(w => w.status === 'active').length,
+        pendingServiceBookings: (serviceBookingsData || []).filter(s => s.status === 'scheduled').length,
+        averageRating: Math.round(averageRating * 10) / 10
+      })
+
+    } catch (error) {
+      console.error("Error fetching data:", error)
+      setError("Failed to fetch data")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleAddPreApprovedEmail = async () => {
+    if (!newEmail.trim()) {
+      setError("Email is required")
       return
     }
 
-    if (user && userProfile?.user_type === "admin") {
-      loadDashboardData()
-    }
-  }, [user, userProfile, authLoading, router])
-
-  const loadDashboardData = async () => {
+    setLoading(true)
     try {
-      const [statsResult, usersResult, emailsResult] = await Promise.all([
-        getDashboardStats(),
-        getAllUsers(),
-        getPreApprovedEmails(),
-      ])
-
-      if (statsResult.data) setStats(statsResult.data)
-      if (usersResult.data) setUsers(usersResult.data)
-      if (emailsResult.data) setPreApprovedEmails(emailsResult.data)
-    } catch (error) {
-      console.error("Error loading dashboard data:", error)
-    }
-  }
-
-  const handleAddEmail = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
-    setSuccess("")
-
-    const { data, error: addError } = await addPreApprovedEmail(newEmail, newRole)
-
-    if (addError) {
-      setError(addError.message)
+      const result = await addPreApprovedEmail(newEmail, newEmailRole)
+      if (result.success) {
+        setSuccess("Email added successfully")
+        setNewEmail("")
+        setNewEmailRole("customer")
+        fetchAllData()
     } else {
-      setSuccess(`Email ${newEmail} added successfully for ${newRole} role!`)
-      setNewEmail("")
-      setNewRole("dealer")
-      loadDashboardData()
+        setError(result.error || "Failed to add email")
+      }
+    } catch (error) {
+      setError("Failed to add email")
+    } finally {
+      setLoading(false)
     }
   }
 
-  const handleRemoveEmail = async (id: string) => {
-    const { error: removeError } = await removePreApprovedEmail(id)
-    if (!removeError) {
-      loadDashboardData()
+  const handleUpdateUserRole = async () => {
+    if (!selectedUser) return
+
+    setLoading(true)
+    try {
+      const result = await updateUserRole(selectedUser.id, newRole)
+      if (result.success) {
+        setSuccess("User role updated successfully")
+        setSelectedUser(null)
+        fetchAllData()
+      } else {
+        setError(result.error || "Failed to update user role")
+      }
+    } catch (error) {
+      setError("Failed to update user role")
+    } finally {
+      setLoading(false)
     }
   }
 
-  const handleUpdateUserRole = async (userId: string, role: "customer" | "dealer" | "admin") => {
-    const { error: updateError } = await updateUserRole(userId, role)
-    if (!updateError) {
-      loadDashboardData()
+  const handleUpdateApplicationStatus = async (applicationId, status) => {
+    setLoading(true)
+    try {
+      const { error } = await supabase
+        .from("dealer_applications")
+        .update({ status })
+        .eq("id", applicationId)
+
+      if (error) throw error
+
+      setSuccess(`Application ${status} successfully`)
+      fetchAllData()
+    } catch (error) {
+      setError("Failed to update application status")
+    } finally {
+      setLoading(false)
     }
   }
 
-  const handleLogout = async () => {
-    await signOut()
-    router.push("/")
-  }
-
-  if (authLoading || !stats) {
+  if (userProfile?.user_type !== "admin") {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="bg-white shadow-sm border-b">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              <Skeleton className="h-8 w-48" />
-              <Skeleton className="h-8 w-24" />
-            </div>
-          </div>
-        </div>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <Skeleton className="h-32" />
-            <Skeleton className="h-32" />
-            <Skeleton className="h-32" />
-            <Skeleton className="h-32" />
-          </div>
-        </div>
+      <div className="container mx-auto p-6">
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Access denied. Admin privileges required.
+          </AlertDescription>
+        </Alert>
       </div>
     )
   }
 
-  if (!user || userProfile?.user_type !== "admin") {
-    return null
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <Crown className="h-8 w-8 text-[#3CB043] mr-3" />
+    <div className="container mx-auto p-6">
+      <div className="flex justify-between items-center mb-6">
               <div>
-                <h1 className="text-2xl font-bold text-[#3CB043]">OMNI E‑RIDE</h1>
-                <p className="text-sm text-gray-600">Admin Dashboard</p>
+          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+          <p className="text-gray-600">Manage your Omni E-Ride showroom system</p>
               </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                <Crown className="h-3 w-3 mr-1" />
-                Admin
-              </Badge>
-              <span className="text-gray-700">Welcome, {userProfile?.full_name}</span>
-              <Button onClick={handleLogout} variant="outline" size="sm">
-                <LogOut className="h-4 w-4 mr-2" />
-                Logout
-              </Button>
-            </div>
-          </div>
+        <div className="flex items-center space-x-2">
+          <span className="text-sm text-gray-500">Welcome, {userProfile?.full_name}</span>
         </div>
-      </header>
+      </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+      {error && (
+        <Alert className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {success && (
+        <Alert className="mb-4">
+          <CheckCircle className="h-4 w-4" />
+          <AlertDescription>{success}</AlertDescription>
+        </Alert>
+      )}
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="users">Users</TabsTrigger>
+          <TabsTrigger value="dealers">Dealers</TabsTrigger>
+          <TabsTrigger value="orders">Orders</TabsTrigger>
+          <TabsTrigger value="services">Services</TabsTrigger>
+          <TabsTrigger value="settings">Settings</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-              <Users className="h-4 w-4" />
+                <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.totalUsers}</div>
-              <p className="text-xs opacity-80">
-                {stats.totalCustomers} customers, {stats.totalDealers} dealers
+                <p className="text-xs text-muted-foreground">
+                  {users.filter(u => u.user_type === 'customer').length} customers
               </p>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white">
+            <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
-              <ShoppingCart className="h-4 w-4" />
+                <CardTitle className="text-sm font-medium">Total Dealers</CardTitle>
+                <Building2 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalOrders}</div>
-              <p className="text-xs opacity-80">{stats.completedOrders} completed</p>
+                <div className="text-2xl font-bold">{stats.totalDealers}</div>
+                <p className="text-xs text-muted-foreground">
+                  {dealers.filter(d => d.status === 'approved').length} active
+                </p>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
+            <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Revenue</CardTitle>
-              <TrendingUp className="h-4 w-4" />
+                <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
+                <ShoppingCart className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">₹{stats.paidRevenue.toLocaleString()}</div>
-              <p className="text-xs opacity-80">Total: ₹{stats.totalRevenue.toLocaleString()}</p>
+                <div className="text-2xl font-bold">{stats.totalOrders}</div>
+                <p className="text-xs text-muted-foreground">
+                  {orders.filter(o => o.status === 'delivered').length} delivered
+                </p>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
+            <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Dealers</CardTitle>
-              <Store className="h-4 w-4" />
+                <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.activeDealers}</div>
-              <p className="text-xs opacity-80">{stats.pendingDealers} pending approval</p>
+                <div className="text-2xl font-bold">₹{stats.totalRevenue.toLocaleString()}</div>
+                <p className="text-xs text-muted-foreground">
+                  All time sales
+                </p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Main Content */}
-        <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="overview" className="flex items-center">
-              <BarChart3 className="h-4 w-4 mr-2" />
-              Overview
-            </TabsTrigger>
-            <TabsTrigger value="users" className="flex items-center">
-              <Users className="h-4 w-4 mr-2" />
-              Users
-            </TabsTrigger>
-            <TabsTrigger value="emails" className="flex items-center">
-              <Mail className="h-4 w-4 mr-2" />
-              Email Management
-            </TabsTrigger>
-            <TabsTrigger value="inquiries" className="flex items-center">
-              <MessageSquare className="h-4 w-4 mr-2" />
-              Inquiries
-            </TabsTrigger>
-            <TabsTrigger value="settings" className="flex items-center">
-              <Settings className="h-4 w-4 mr-2" />
-              Settings
-            </TabsTrigger>
-          </TabsList>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Pending Applications</CardTitle>
+                <FileText className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.pendingApplications}</div>
+                <p className="text-xs text-muted-foreground">
+                  Dealer applications
+                </p>
+              </CardContent>
+            </Card>
 
-          <TabsContent value="overview">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Active Warranties</CardTitle>
+                <Shield className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.activeWarranties}</div>
+                <p className="text-xs text-muted-foreground">
+                  Valid warranties
+                </p>
+              </CardContent>
+            </Card>
+
               <Card>
-                <CardHeader>
-                  <CardTitle>Quick Stats</CardTitle>
-                  <CardDescription>System overview at a glance</CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Service Bookings</CardTitle>
+                <Wrench className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Total Customers</span>
-                    <Badge variant="outline">{stats.totalCustomers}</Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Active Dealers</span>
-                    <Badge variant="outline">{stats.activeDealers}</Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Pending Orders</span>
-                    <Badge variant="outline">{stats.pendingOrders}</Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">New Inquiries</span>
-                    <Badge variant="outline">{stats.newInquiries}</Badge>
-                  </div>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.pendingServiceBookings}</div>
+                <p className="text-xs text-muted-foreground">
+                  Pending services
+                </p>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardHeader>
-                  <CardTitle>System Status</CardTitle>
-                  <CardDescription>Current system health</CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Average Rating</CardTitle>
+                <Star className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Database</span>
-                      <Badge variant="outline" className="bg-green-50 text-green-700">
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        Online
-                      </Badge>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Authentication</span>
-                      <Badge variant="outline" className="bg-green-50 text-green-700">
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        Active
-                      </Badge>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Email Service</span>
-                      <Badge variant="outline" className="bg-green-50 text-green-700">
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        Working
-                      </Badge>
-                    </div>
-                  </div>
+                <div className="text-2xl font-bold">{stats.averageRating}/5</div>
+                <p className="text-xs text-muted-foreground">
+                  Customer satisfaction
+                </p>
                 </CardContent>
               </Card>
             </div>
           </TabsContent>
 
-          <TabsContent value="users">
+        <TabsContent value="users" className="space-y-4">
             <Card>
               <CardHeader>
                 <CardTitle>User Management</CardTitle>
-                <CardDescription>Manage user roles and permissions</CardDescription>
+              <CardDescription>Manage all users in the system</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Phone</TableHead>
+                    <TableHead>Joined</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {users.map((user) => (
-                    <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex items-center space-x-4">
-                        <div>
-                          <p className="font-medium">{user.full_name}</p>
-                          <p className="text-sm text-gray-600">{user.email}</p>
-                          <p className="text-xs text-gray-500">
-                            Joined: {new Date(user.created_at).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <Badge
-                          variant={
-                            user.user_type === "admin"
-                              ? "default"
-                              : user.user_type === "dealer"
-                                ? "secondary"
-                                : "outline"
-                          }
-                        >
+                    <TableRow key={user.id}>
+                      <TableCell>{user.full_name}</TableCell>
+                      <TableCell>{user.email}</TableCell>
+                      <TableCell>
+                        <Badge variant={user.user_type === 'admin' ? 'destructive' : user.user_type === 'dealer' ? 'default' : 'secondary'}>
                           {user.user_type}
                         </Badge>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Select
-                          value={user.user_type}
-                          onValueChange={(value: "customer" | "dealer" | "admin") =>
-                            handleUpdateUserRole(user.id, value)
-                          }
-                        >
-                          <SelectTrigger className="w-32">
+                      </TableCell>
+                      <TableCell>{user.phone}</TableCell>
+                      <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button variant="outline" size="sm" onClick={() => setSelectedUser(user)}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Update User Role</DialogTitle>
+                              <DialogDescription>
+                                Change the role for {user.full_name}
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-4">
+                              <div>
+                                <Label htmlFor="role">Role</Label>
+                                <Select value={newRole} onValueChange={(value) => setNewRole(value)}>
+                                  <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -367,160 +406,282 @@ export default function AdminDashboard() {
                         </Select>
                       </div>
                     </div>
+                            <DialogFooter>
+                              <Button onClick={handleUpdateUserRole} disabled={loading}>
+                                {loading ? "Updating..." : "Update Role"}
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                  {users.length === 0 && <p className="text-center text-gray-500 py-8">No users found</p>}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="dealers" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Dealer Management</CardTitle>
+              <CardDescription>Manage all dealers and their status</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Business Name</TableHead>
+                    <TableHead>Contact</TableHead>
+                    <TableHead>Address</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Joined</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {dealers.map((dealer) => (
+                    <TableRow key={dealer.id}>
+                      <TableCell>{dealer.business_name}</TableCell>
+                      <TableCell>
+                        <div>
+                          <div>{dealer.email}</div>
+                          <div className="text-sm text-gray-500">{dealer.phone}</div>
                 </div>
+                      </TableCell>
+                      <TableCell>{dealer.business_address}</TableCell>
+                      <TableCell>
+                        <Badge variant={dealer.status === 'approved' ? 'default' : dealer.status === 'pending' ? 'secondary' : 'destructive'}>
+                          {dealer.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{new Date(dealer.created_at).toLocaleDateString()}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="orders" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Order Management</CardTitle>
+              <CardDescription>View and manage all orders</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Order ID</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Dealer</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Payment</TableHead>
+                    <TableHead>Date</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {orders.map((order) => (
+                    <TableRow key={order.id}>
+                      <TableCell>{order.id.slice(0, 8)}...</TableCell>
+                      <TableCell>{order.customer_id}</TableCell>
+                      <TableCell>{order.dealer_id}</TableCell>
+                      <TableCell>₹{order.total_amount}</TableCell>
+                      <TableCell>
+                        <Badge variant={order.status === 'delivered' ? 'default' : order.status === 'cancelled' ? 'destructive' : 'secondary'}>
+                          {order.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={order.payment_status === 'paid' ? 'default' : 'secondary'}>
+                          {order.payment_status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="services" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Service Bookings</CardTitle>
+              <CardDescription>Manage service appointments and warranties</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Service Type</TableHead>
+                    <TableHead>Scheduled Date</TableHead>
+                    <TableHead>Cost</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {serviceBookings.map((booking) => (
+                    <TableRow key={booking.id}>
+                      <TableCell>{booking.customer_id}</TableCell>
+                      <TableCell>{booking.service_type}</TableCell>
+                      <TableCell>{new Date(booking.scheduled_date).toLocaleDateString()}</TableCell>
+                      <TableCell>₹{booking.total_cost || 0}</TableCell>
+                      <TableCell>
+                        <Badge variant={booking.status === 'completed' ? 'default' : booking.status === 'cancelled' ? 'destructive' : 'secondary'}>
+                          {booking.status}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
               </CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="emails">
+        <TabsContent value="settings" className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Pre-approved Emails</CardTitle>
-                  <CardDescription>
-                    Add emails that can signup with specific roles. Users with these emails will automatically get the
-                    assigned role.
-                  </CardDescription>
-                </div>
-                <Dialog open={showAddEmail} onOpenChange={setShowAddEmail}>
-                  <DialogTrigger asChild>
-                    <Button>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Email
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Add Pre-approved Email</DialogTitle>
-                      <DialogDescription>
-                        Add an email that can signup with admin or dealer role. When this person signs up, they will
-                        automatically get the selected role.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <form onSubmit={handleAddEmail} className="space-y-4">
+              <CardHeader>
+                <CardTitle>Add Pre-approved Email</CardTitle>
+                <CardDescription>Add emails that can sign up with specific roles</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
                       <div>
                         <Label htmlFor="email">Email Address</Label>
                         <Input
                           id="email"
                           type="email"
+                    placeholder="Enter email address"
                           value={newEmail}
                           onChange={(e) => setNewEmail(e.target.value)}
-                          required
-                          placeholder="Enter email address"
                         />
                       </div>
-
                       <div>
                         <Label htmlFor="role">Role</Label>
-                        <Select value={newRole} onValueChange={(value: "admin" | "dealer") => setNewRole(value)}>
+                  <Select value={newEmailRole} onValueChange={(value) => setNewEmailRole(value)}>
                           <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
+                      <SelectItem value="customer">Customer</SelectItem>
                             <SelectItem value="dealer">Dealer</SelectItem>
                             <SelectItem value="admin">Admin</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
-
-                      {error && (
-                        <Alert variant="destructive">
-                          <XCircle className="h-4 w-4" />
-                          <AlertDescription>{error}</AlertDescription>
-                        </Alert>
-                      )}
-
-                      {success && (
-                        <Alert className="border-green-200 bg-green-50">
-                          <CheckCircle className="h-4 w-4" />
-                          <AlertDescription className="text-green-800">{success}</AlertDescription>
-                        </Alert>
-                      )}
-
-                      <div className="flex gap-2">
-                        <Button type="submit" disabled={adminLoading}>
-                          {adminLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                          Add Email
-                        </Button>
-                        <Button type="button" variant="outline" onClick={() => setShowAddEmail(false)}>
-                          Cancel
-                        </Button>
-                      </div>
-                    </form>
-                  </DialogContent>
-                </Dialog>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {preApprovedEmails.map((email) => (
-                    <div key={email.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex items-center space-x-4">
-                        <div>
-                          <p className="font-medium">{email.email}</p>
-                          <p className="text-sm text-gray-600">
-                            Added on {new Date(email.created_at).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <Badge variant={email.role === "admin" ? "default" : "secondary"}>{email.role}</Badge>
-                        {email.used && (
-                          <Badge variant="outline" className="bg-green-50 text-green-700">
-                            <CheckCircle className="h-3 w-3 mr-1" />
-                            Used
-                          </Badge>
-                        )}
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleRemoveEmail(email.id)}
-                        disabled={adminLoading}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Remove
+                <Button onClick={handleAddPreApprovedEmail} disabled={loading}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  {loading ? "Adding..." : "Add Email"}
                       </Button>
-                    </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Pre-approved Emails</CardTitle>
+                <CardDescription>Manage pre-approved email addresses</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Used</TableHead>
+                      <TableHead>Date Added</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {preApprovedEmails.map((email) => (
+                      <TableRow key={email.id}>
+                        <TableCell>{email.email}</TableCell>
+                        <TableCell>
+                          <Badge variant={email.role === 'admin' ? 'destructive' : email.role === 'dealer' ? 'default' : 'secondary'}>
+                            {email.role}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={email.used ? 'default' : 'secondary'}>
+                            {email.used ? 'Used' : 'Unused'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{new Date(email.created_at).toLocaleDateString()}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </div>
+
+            <Card>
+              <CardHeader>
+              <CardTitle>Dealer Applications</CardTitle>
+              <CardDescription>Review and approve dealer applications</CardDescription>
+              </CardHeader>
+              <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Business Name</TableHead>
+                    <TableHead>Contact Person</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Experience</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {applications.map((application) => (
+                    <TableRow key={application.id}>
+                      <TableCell>{application.business_name}</TableCell>
+                      <TableCell>{application.contact_person}</TableCell>
+                      <TableCell>{application.email}</TableCell>
+                      <TableCell>{application.experience_years} years</TableCell>
+                      <TableCell>
+                        <Badge variant={application.status === 'approved' ? 'default' : application.status === 'pending' ? 'secondary' : 'destructive'}>
+                          {application.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {application.status === 'pending' && (
+                          <div className="flex space-x-2">
+                            <Button
+                              size="sm"
+                              onClick={() => handleUpdateApplicationStatus(application.id, 'approved')}
+                              disabled={loading}
+                            >
+                              <CheckCircle className="h-4 w-4 mr-1" />
+                              Approve
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleUpdateApplicationStatus(application.id, 'rejected')}
+                              disabled={loading}
+                            >
+                              <XCircle className="h-4 w-4 mr-1" />
+                              Reject
+                            </Button>
+                </div>
+                        )}
+                      </TableCell>
+                    </TableRow>
                   ))}
-                  {preApprovedEmails.length === 0 && (
-                    <p className="text-center text-gray-500 py-8">No pre-approved emails found</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="inquiries">
-            <Card>
-              <CardHeader>
-                <CardTitle>Contact Inquiries</CardTitle>
-                <CardDescription>Manage customer inquiries and support requests</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">Inquiry management coming soon...</p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="settings">
-            <Card>
-              <CardHeader>
-                <CardTitle>System Settings</CardTitle>
-                <CardDescription>Configure system-wide settings</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <Settings className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">Settings panel coming soon...</p>
-                </div>
+                </TableBody>
+              </Table>
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
-      </div>
     </div>
   )
 }
