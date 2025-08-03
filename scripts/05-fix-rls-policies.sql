@@ -2,6 +2,10 @@
 DROP POLICY IF EXISTS "Users can view own profile" ON user_profiles;
 DROP POLICY IF EXISTS "Users can update own profile" ON user_profiles;
 DROP POLICY IF EXISTS "Users can insert own profile" ON user_profiles;
+DROP POLICY IF EXISTS "Enable insert for authenticated users" ON user_profiles;
+DROP POLICY IF EXISTS "Enable select for users based on user_id" ON user_profiles;
+DROP POLICY IF EXISTS "Enable update for users based on user_id" ON user_profiles;
+DROP POLICY IF EXISTS "Enable all for admins" ON user_profiles;
 
 -- Create new RLS policies for user_profiles
 CREATE POLICY "Enable insert for authenticated users" ON user_profiles

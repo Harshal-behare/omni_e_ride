@@ -84,7 +84,6 @@ export function useAuth() {
 
       if (error) throw error
 
-      // The user profile will be created via database trigger or we'll create it after email confirmation
       return { data, error: null }
     } catch (error) {
       return { data: null, error }

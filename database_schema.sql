@@ -16,6 +16,33 @@ CREATE TABLE public.contact_inquiries (
   CONSTRAINT contact_inquiries_pkey PRIMARY KEY (id),
   CONSTRAINT contact_inquiries_assigned_to_fkey FOREIGN KEY (assigned_to) REFERENCES public.user_profiles(id)
 );
+CREATE TABLE public.dealer_applications (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  business_name text NOT NULL,
+  owner_name text NOT NULL,
+  email text NOT NULL,
+  phone text NOT NULL,
+  address text NOT NULL,
+  city text NOT NULL,
+  state text NOT NULL,
+  pincode text NOT NULL,
+  business_type text NOT NULL,
+  experience_years integer NOT NULL,
+  investment_capacity text NOT NULL,
+  territory_preference text NOT NULL,
+  business_license text,
+  gst_number text,
+  pan_number text,
+  bank_account text,
+  ifsc_code text,
+  status text DEFAULT 'pending'::text CHECK (status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text])),
+  notes text,
+  applied_at timestamp with time zone DEFAULT now(),
+  reviewed_at timestamp with time zone,
+  reviewed_by uuid,
+  CONSTRAINT dealer_applications_pkey PRIMARY KEY (id),
+  CONSTRAINT dealer_applications_reviewed_by_fkey FOREIGN KEY (reviewed_by) REFERENCES public.user_profiles(id)
+);
 CREATE TABLE public.dealer_sales (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
   dealer_id uuid,
@@ -25,8 +52,8 @@ CREATE TABLE public.dealer_sales (
   sale_date date DEFAULT CURRENT_DATE,
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT dealer_sales_pkey PRIMARY KEY (id),
-  CONSTRAINT dealer_sales_dealer_id_fkey FOREIGN KEY (dealer_id) REFERENCES public.dealers(id),
-  CONSTRAINT dealer_sales_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id)
+  CONSTRAINT dealer_sales_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id),
+  CONSTRAINT dealer_sales_dealer_id_fkey FOREIGN KEY (dealer_id) REFERENCES public.dealers(id)
 );
 CREATE TABLE public.dealers (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -117,8 +144,8 @@ CREATE TABLE public.test_ride_bookings (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT test_ride_bookings_pkey PRIMARY KEY (id),
-  CONSTRAINT test_ride_bookings_model_id_fkey FOREIGN KEY (model_id) REFERENCES public.models(id),
   CONSTRAINT test_ride_bookings_dealer_id_fkey FOREIGN KEY (dealer_id) REFERENCES public.dealers(id),
+  CONSTRAINT test_ride_bookings_model_id_fkey FOREIGN KEY (model_id) REFERENCES public.models(id),
   CONSTRAINT test_ride_bookings_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.user_profiles(id)
 );
 CREATE TABLE public.user_profiles (

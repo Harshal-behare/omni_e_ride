@@ -3,6 +3,7 @@ import Navbar from "../components/Navbar"
 import Hero from "../components/Hero"
 import Footer from "../components/Footer"
 import WhatsAppButton from "../components/WhatsAppButton"
+import CostSavingsCalculator from "../components/CostSavingsCalculator"
 import { useModels } from "@/hooks/useModels"
 import { useDealers } from "@/hooks/useDealers"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -61,7 +62,7 @@ export default function Home() {
                     <Image
                       src={
                         model.image_url ||
-                        `/placeholder.svg?height=300&width=400&text=${encodeURIComponent(model.name)}`
+                        `/placeholder.svg?height=300&width=400&text=${encodeURIComponent(model.name) || "/placeholder.svg"}`
                       }
                       alt={model.name}
                       fill
@@ -122,6 +123,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Cost Savings Calculator Section */}
+      <CostSavingsCalculator />
 
       {/* Why Choose Us Section */}
       <section className="py-20">
@@ -301,16 +305,20 @@ export default function Home() {
             Join thousands of satisfied customers who have made the switch to sustainable transportation
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" className="bg-white text-[#3CB043] hover:bg-gray-100">
-              Schedule Test Ride
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="border-white text-white hover:bg-white hover:text-[#3CB043] bg-transparent"
-            >
-              View All Models
-            </Button>
+            <Link href="/login">
+              <Button size="lg" className="bg-white text-[#3CB043] hover:bg-gray-100">
+                Schedule Test Ride
+              </Button>
+            </Link>
+            <Link href="/models">
+              <Button
+                size="lg"
+                variant="outline"
+                className="border-white text-white hover:bg-white hover:text-[#3CB043] bg-transparent"
+              >
+                View All Models
+              </Button>
+            </Link>
           </div>
         </div>
       </section>

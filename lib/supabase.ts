@@ -20,21 +20,19 @@ export interface UserProfile {
 }
 
 export interface Model {
-  id: number
+  id: string
   name: string
+  description: string
   price: number
   range: string
   top_speed: string
   charging_time: string
   battery: string
-  acceleration?: string
-  colors: string[]
+  image_url?: string
   features: string[]
   specifications: Record<string, string>
-  description: string
-  image_url?: string
-  gallery_images?: string[]
-  is_active: boolean
+  colors: string[]
+  status: string
   created_at: string
   updated_at: string
 }
@@ -57,6 +55,7 @@ export interface TestRideBooking {
   created_at: string
   updated_at: string
   models?: Model
+  dealers?: Dealer
 }
 
 export interface Order {
@@ -70,32 +69,28 @@ export interface Order {
   amount: number
   color: string
   status: "pending" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled"
+  payment_status: "pending" | "paid" | "failed" | "refunded"
   order_date: string
   delivery_address: string
-  payment_status: "pending" | "paid" | "failed"
   tracking_number?: string
   created_at: string
   updated_at: string
   models?: Model
 }
 
-export interface Dealer {
+export type Dealer = {
   id: string
-  user_id: string
   name: string
   location: string
   address: string
   phone: string
   email: string
   manager_name: string
-  status: "pending" | "approved" | "active" | "inactive"
+  status: string
   monthly_sales: number
   total_sales: number
-  commission_rate: number
-  territory: string[]
   created_at: string
   updated_at: string
-  users?: UserProfile
 }
 
 export interface ContactInquiry {
@@ -108,6 +103,29 @@ export interface ContactInquiry {
   status: "new" | "in_progress" | "resolved"
   assigned_to?: string
   response?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface DealerApplication {
+  id: string
+  full_name: string
+  email: string
+  phone: string
+  business_name: string
+  business_address: string
+  city: string
+  state: string
+  pincode: string
+  business_type: string
+  experience_years?: number
+  investment_capacity?: string
+  expected_sales?: number
+  territory_preference?: string[]
+  additional_info?: string
+  status: "pending" | "approved" | "rejected"
+  reviewed_by?: string
+  reviewed_at?: string
   created_at: string
   updated_at: string
 }
@@ -130,7 +148,17 @@ export interface Inventory {
   model_id: number
   stock_quantity: number
   reserved_quantity: number
+  available_quantity?: number
   last_updated: string
   dealers?: Dealer
   models?: Model
+}
+
+export interface PreApprovedEmail {
+  id: string
+  email: string
+  role: "admin" | "dealer"
+  created_by?: string
+  created_at: string
+  used: boolean
 }

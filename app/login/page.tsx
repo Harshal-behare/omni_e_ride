@@ -4,42 +4,42 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { useAuthContext } from "@/components/AuthProvider"
+import { useAuth } from "@/hooks/useAuth"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Eye, EyeOff, Loader2, Mail } from "lucide-react"
+import { Loader2, Mail, Lock, User, Phone, ArrowLeft } from "lucide-react"
+import Link from "next/link"
 
 export default function LoginPage() {
-  const [showPassword, setShowPassword] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
-  const [success, setSuccess] = useState("")
-  const [showEmailVerification, setShowEmailVerification] = useState(false)
-  const [signupEmail, setSignupEmailForVerification] = useState("")
-
-  // Login form
-  const [loginEmail, setLoginEmail] = useState("")
-  const [loginPassword, setLoginPassword] = useState("")
-
-  // Signup form
-  const [signupEmailInput, setSignupEmail] = useState("")
-  const [signupPassword, setSignupPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
-  const [fullName, setFullName] = useState("")
-  const [phone, setPhone] = useState("")
-
-  const { signIn, signUp, resendConfirmation, user, userProfile } = useAuthContext()
   const router = useRouter()
+  const { user, userProfile, signIn, signUp, loading: authLoading } = useAuth()
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState("login")
+
+  // Login form state
+  const [loginData, setLoginData] = useState({
+    email: "",
+    password: "",
+  })
+
+  // Signup form state
+  const [signupData, setSignupData] = useState({
+    email: "",
+    password: "",
+    confirmPassword: "",
+    fullName: "",
+    phone: "",
+  })
 
   // Redirect if already logged in
   useEffect(() => {
     if (user && userProfile) {
-      // Redirect based on user type
       switch (userProfile.user_type) {
         case "admin":
           router.push("/admin/dashboard")
@@ -59,319 +59,275 @@ export default function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    setError("")
+    setError(null)
 
-    const { data, error } = await signIn(loginEmail, loginPassword)
+    try {
+      const { data, error } = await signIn(loginData.email, loginData.password)
 
-    if (error) {
-      setError(error.message)
-    } else if (data.user) {
-      // Redirect will be handled by useEffect above
+      if (error) {
+        setError(error.message)
+        return
+      }
+
+      if (data?.user) {
+        // The useEffect above will handle the redirect
+        setSuccess("Login successful! Redirecting...")
+      }
+    } catch (err) {
+      setError("An unexpected error occurred")
+    } finally {
+      setLoading(false)
     }
-
-    setLoading(false)
   }
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    setError("")
-    setSuccess("")
+    setError(null)
 
-    // Validation
-    if (signupPassword !== confirmPassword) {
+    if (signupData.password !== signupData.confirmPassword) {
       setError("Passwords do not match")
       setLoading(false)
       return
     }
 
-    if (signupPassword.length < 6) {
+    if (signupData.password.length < 6) {
       setError("Password must be at least 6 characters long")
       setLoading(false)
       return
     }
 
-    const { data, error } = await signUp(signupEmailInput, signupPassword, fullName, phone)
+    try {
+      const { data, error } = await signUp(signupData.email, signupData.password, signupData.fullName, signupData.phone)
 
-    if (error) {
-      setError(error.message)
-    } else {
-      setSignupEmailForVerification(signupEmailInput)
-      setShowEmailVerification(true)
-      setSuccess("Please check your email and click the verification link to complete your registration.")
-      // Clear form
-      setSignupEmail("")
-      setSignupPassword("")
-      setConfirmPassword("")
-      setFullName("")
-      setPhone("")
+      if (error) {
+        setError(error.message)
+        return
+      }
+
+      if (data?.user) {
+        setSuccess("Account created successfully! Please check your email to verify your account.")
+        setSignupData({
+          email: "",
+          password: "",
+          confirmPassword: "",
+          fullName: "",
+          phone: "",
+        })
+      }
+    } catch (err) {
+      setError("An unexpected error occurred")
+    } finally {
+      setLoading(false)
     }
-
-    setLoading(false)
   }
 
-  const handleResendConfirmation = async () => {
-    setLoading(true)
-    const { error } = await resendConfirmation(signupEmail)
-
-    if (error) {
-      setError(error.message)
-    } else {
-      setSuccess("Verification email sent! Please check your inbox.")
-    }
-
-    setLoading(false)
-  }
-
-  if (showEmailVerification) {
+  if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-8">
-          <div className="text-center">
-            <Link href="/" className="text-3xl font-bold text-[#3CB043]">
-              OMNI E‑RIDE
-            </Link>
-          </div>
-
-          <Card>
-            <CardHeader className="text-center">
-              <div className="mx-auto flex items-center justify-center w-12 h-12 rounded-full bg-blue-100">
-                <Mail className="w-6 h-6 text-blue-600" />
-              </div>
-              <CardTitle>Check your email</CardTitle>
-              <CardDescription>
-                We've sent a verification link to <strong>{signupEmail}</strong>
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-gray-600 text-center">
-                Click the link in the email to verify your account and complete your registration.
-              </p>
-
-              {success && (
-                <Alert>
-                  <AlertDescription>{success}</AlertDescription>
-                </Alert>
-              )}
-
-              {error && (
-                <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-
-              <div className="space-y-2">
-                <Button
-                  onClick={handleResendConfirmation}
-                  variant="outline"
-                  className="w-full bg-transparent"
-                  disabled={loading}
-                >
-                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Resend verification email
-                </Button>
-
-                <Button onClick={() => setShowEmailVerification(false)} variant="ghost" className="w-full">
-                  Back to signup
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p>Loading...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div className="text-center">
+    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="text-center mb-8">
           <Link href="/" className="text-3xl font-bold text-[#3CB043]">
             OMNI E‑RIDE
           </Link>
-          <p className="mt-2 text-gray-600">Sign in to your account or create a new one</p>
+          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">Welcome back</h2>
+          <p className="mt-2 text-sm text-gray-600">Sign in to your account or create a new one</p>
         </div>
 
-        <Tabs defaultValue="login" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="login">Sign In</TabsTrigger>
-            <TabsTrigger value="signup">Sign Up</TabsTrigger>
-          </TabsList>
+        <Card>
+          <CardContent className="p-6">
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="login">Sign In</TabsTrigger>
+                <TabsTrigger value="signup">Sign Up</TabsTrigger>
+              </TabsList>
 
-          <TabsContent value="login">
-            <Card>
-              <CardHeader>
-                <CardTitle>Sign In</CardTitle>
-                <CardDescription>Enter your credentials to access your account</CardDescription>
-              </CardHeader>
-              <CardContent>
+              {error && (
+                <Alert variant="destructive" className="mt-4">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
+              {success && (
+                <Alert className="mt-4 border-green-200 bg-green-50">
+                  <AlertDescription className="text-green-800">{success}</AlertDescription>
+                </Alert>
+              )}
+
+              <TabsContent value="login" className="space-y-4 mt-6">
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div>
                     <Label htmlFor="login-email">Email</Label>
-                    <Input
-                      id="login-email"
-                      type="email"
-                      value={loginEmail}
-                      onChange={(e) => setLoginEmail(e.target.value)}
-                      required
-                      placeholder="Enter your email"
-                    />
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="login-email"
+                        type="email"
+                        placeholder="Enter your email"
+                        className="pl-10"
+                        value={loginData.email}
+                        onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
+                        required
+                      />
+                    </div>
                   </div>
 
                   <div>
                     <Label htmlFor="login-password">Password</Label>
                     <div className="relative">
+                      <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                       <Input
                         id="login-password"
-                        type={showPassword ? "text" : "password"}
-                        value={loginPassword}
-                        onChange={(e) => setLoginPassword(e.target.value)}
-                        required
+                        type="password"
                         placeholder="Enter your password"
+                        className="pl-10"
+                        value={loginData.password}
+                        onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
+                        required
                       />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                        onClick={() => setShowPassword(!showPassword)}
-                      >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </Button>
                     </div>
                   </div>
 
-                  {error && (
-                    <Alert variant="destructive">
-                      <AlertDescription>{error}</AlertDescription>
-                    </Alert>
-                  )}
-
                   <Button type="submit" className="w-full" disabled={loading}>
-                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Sign In
+                    {loading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Signing in...
+                      </>
+                    ) : (
+                      "Sign In"
+                    )}
                   </Button>
                 </form>
 
-                <div className="mt-4 text-center">
-                  <p className="text-sm text-gray-600">Demo Accounts:</p>
-                  <div className="text-xs text-gray-500 mt-2 space-y-1">
-                    <p>Admin: admin@omnierride.com / admin123</p>
-                    <p>Dealer: dealer@omnierride.com / dealer123</p>
-                  </div>
+                <div className="text-center">
+                  <p className="text-sm text-gray-600">
+                    Demo Credentials:
+                    <br />
+                    Admin: harshalbehare1@gmail.com
+                  </p>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+              </TabsContent>
 
-          <TabsContent value="signup">
-            <Card>
-              <CardHeader>
-                <CardTitle>Create Customer Account</CardTitle>
-                <CardDescription>Sign up for a new customer account with email verification</CardDescription>
-              </CardHeader>
-              <CardContent>
+              <TabsContent value="signup" className="space-y-4 mt-6">
                 <form onSubmit={handleSignup} className="space-y-4">
                   <div>
                     <Label htmlFor="signup-name">Full Name</Label>
-                    <Input
-                      id="signup-name"
-                      type="text"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      required
-                      placeholder="Enter your full name"
-                    />
+                    <div className="relative">
+                      <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="signup-name"
+                        type="text"
+                        placeholder="Enter your full name"
+                        className="pl-10"
+                        value={signupData.fullName}
+                        onChange={(e) => setSignupData({ ...signupData, fullName: e.target.value })}
+                        required
+                      />
+                    </div>
                   </div>
 
                   <div>
                     <Label htmlFor="signup-email">Email</Label>
-                    <Input
-                      id="signup-email"
-                      type="email"
-                      value={signupEmailInput}
-                      onChange={(e) => setSignupEmail(e.target.value)}
-                      required
-                      placeholder="Enter your email"
-                    />
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="signup-email"
+                        type="email"
+                        placeholder="Enter your email"
+                        className="pl-10"
+                        value={signupData.email}
+                        onChange={(e) => setSignupData({ ...signupData, email: e.target.value })}
+                        required
+                      />
+                    </div>
                   </div>
 
                   <div>
                     <Label htmlFor="signup-phone">Phone Number</Label>
-                    <Input
-                      id="signup-phone"
-                      type="tel"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="Enter your phone number"
-                    />
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="signup-phone"
+                        type="tel"
+                        placeholder="Enter your phone number"
+                        className="pl-10"
+                        value={signupData.phone}
+                        onChange={(e) => setSignupData({ ...signupData, phone: e.target.value })}
+                      />
+                    </div>
                   </div>
 
                   <div>
                     <Label htmlFor="signup-password">Password</Label>
                     <div className="relative">
+                      <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                       <Input
                         id="signup-password"
-                        type={showPassword ? "text" : "password"}
-                        value={signupPassword}
-                        onChange={(e) => setSignupPassword(e.target.value)}
-                        required
+                        type="password"
                         placeholder="Create a password"
-                        minLength={6}
+                        className="pl-10"
+                        value={signupData.password}
+                        onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
+                        required
                       />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                        onClick={() => setShowPassword(!showPassword)}
-                      >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </Button>
                     </div>
                   </div>
 
                   <div>
-                    <Label htmlFor="confirm-password">Confirm Password</Label>
-                    <Input
-                      id="confirm-password"
-                      type="password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      required
-                      placeholder="Confirm your password"
-                    />
+                    <Label htmlFor="signup-confirm-password">Confirm Password</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="signup-confirm-password"
+                        type="password"
+                        placeholder="Confirm your password"
+                        className="pl-10"
+                        value={signupData.confirmPassword}
+                        onChange={(e) => setSignupData({ ...signupData, confirmPassword: e.target.value })}
+                        required
+                      />
+                    </div>
                   </div>
 
-                  {error && (
-                    <Alert variant="destructive">
-                      <AlertDescription>{error}</AlertDescription>
-                    </Alert>
-                  )}
-
-                  {success && (
-                    <Alert>
-                      <AlertDescription>{success}</AlertDescription>
-                    </Alert>
-                  )}
-
                   <Button type="submit" className="w-full" disabled={loading}>
-                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Create Account
+                    {loading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Creating account...
+                      </>
+                    ) : (
+                      "Create Account"
+                    )}
                   </Button>
                 </form>
 
-                <p className="mt-4 text-xs text-gray-500 text-center">
-                  By signing up, you agree to receive email verification. Customer accounts require email verification.
-                </p>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                <div className="text-center">
+                  <p className="text-xs text-gray-500">
+                    By signing up, you agree to our Terms of Service and Privacy Policy.
+                    <br />
+                    You will receive an email verification link.
+                  </p>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
 
-        <div className="text-center">
-          <Link href="/" className="text-sm text-[#3CB043] hover:underline">
-            ← Back to Homepage
+        <div className="mt-6 text-center">
+          <Link href="/" className="flex items-center justify-center text-sm text-gray-600 hover:text-[#3CB043]">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Home
           </Link>
         </div>
       </div>
