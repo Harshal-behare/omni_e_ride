@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdminActions } from "@/hooks/useAdminActions";
 import { useRouter } from "next/navigation";
+import type { User, UserProfile, Dealer, Order, DealerApplication, PreApprovedEmail, ServiceBooking, Warranty, Transaction, Review } from "@/types/database";
 import {
   Card,
   CardContent,
@@ -70,21 +71,21 @@ export default function AdminDashboard() {
   const [success, setSuccess] = useState<string | null>(null);
 
   // Data states
-  const [users, setUsers] = useState([]);
-  const [dealers, setDealers] = useState([]);
-  const [orders, setOrders] = useState([]);
-  const [applications, setApplications] = useState([]);
-  const [preApprovedEmails, setPreApprovedEmails] = useState([]);
-  const [serviceBookings, setServiceBookings] = useState([]);
-  const [warranties, setWarranties] = useState([]);
-  const [transactions, setTransactions] = useState([]);
-  const [reviews, setReviews] = useState([]);
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [dealers, setDealers] = useState<Dealer[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [applications, setApplications] = useState<DealerApplication[]>([]);
+  const [preApprovedEmails, setPreApprovedEmails] = useState<PreApprovedEmail[]>([]);
+  const [serviceBookings, setServiceBookings] = useState<ServiceBooking[]>([]);
+  const [warranties, setWarranties] = useState<Warranty[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
 
   // Form states
   const [newEmail, setNewEmail] = useState("");
-  const [newEmailRole, setNewEmailRole] = useState("customer");
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [newRole, setNewRole] = useState("customer");
+  const [newEmailRole, setNewEmailRole] = useState<"admin" | "dealer" | "customer">("customer");
+  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
+  const [newRole, setNewRole] = useState<"admin" | "dealer" | "customer">("customer");
 
   // Stats
   const [stats, setStats] = useState({
@@ -247,7 +248,7 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleUpdateApplicationStatus = async (applicationId, status) => {
+  const handleUpdateApplicationStatus = async (applicationId: string, status: "pending" | "approved" | "rejected") => {
     setLoading(true);
     try {
       const { error } = await supabase
@@ -537,7 +538,7 @@ export default function AdminDashboard() {
                                 <Label htmlFor="role">Role</Label>
                                 <Select
                                   value={newRole}
-                                  onValueChange={(value) => setNewRole(value)}
+                                  onValueChange={(value) => setNewRole(value as "admin" | "dealer" | "customer")}
                                 >
                                   <SelectTrigger>
                                     <SelectValue />
@@ -756,14 +757,14 @@ export default function AdminDashboard() {
                     type="email"
                     placeholder="Enter email address"
                     value={newEmail}
-                    onChange={(e) => setNewEmail(e.target.value)}
+                    onChange={(e) => setNewEmail(e.target.value as string)}
                   />
                 </div>
                 <div>
                   <Label htmlFor="role">Role</Label>
                   <Select
                     value={newEmailRole}
-                    onValueChange={(value) => setNewEmailRole(value)}
+                    onValueChange={(value) => setNewEmailRole(value as "admin" | "dealer" | "customer")}
                   >
                     <SelectTrigger>
                       <SelectValue />

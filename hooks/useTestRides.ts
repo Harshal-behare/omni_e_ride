@@ -47,7 +47,15 @@ export function useTestRides() {
   }
 
   const createBooking = async (
-    bookingData: Omit<TestRideBooking, "id" | "created_at" | "updated_at" | "booking_id">,
+    bookingData: {
+      model_id: string
+      preferred_date: string
+      preferred_time: string
+      status: 'pending' | 'confirmed' | 'completed' | 'cancelled'
+      notes?: string | null
+      dealer_id?: string | null
+      customer_id?: string | null
+    },
   ) => {
     try {
       setLoading(true)

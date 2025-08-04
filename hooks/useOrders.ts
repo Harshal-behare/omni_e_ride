@@ -1,8 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { supabase, type Order } from "@/lib/supabase"
-import { useAuth } from "./useAuth"
+import { useState, useEffect } from 'react'
+import { createClient } from '@/utils/supabase/client'
+import { toast } from '@/hooks/use-toast'
+import { useAuth } from './useAuth'
+import type { Order, OrderStats } from '@/types/database'
 
 export function useOrders() {
   const [orders, setOrders] = useState<Order[]>([])
@@ -19,6 +21,7 @@ export function useOrders() {
   const fetchOrders = async () => {
     try {
       setLoading(true)
+      const supabase = createClient()
       let query = supabase
         .from("orders")
         .select(`
@@ -51,6 +54,7 @@ export function useOrders() {
     try {
       setLoading(true)
 
+      const supabase = createClient()
       const { data, error } = await supabase.from("orders").insert([orderData]).select().single()
 
       if (error) throw error
@@ -68,6 +72,7 @@ export function useOrders() {
 
   const updateOrderStatus = async (id: string, status: Order["status"]) => {
     try {
+      const supabase = createClient()
       const { error } = await supabase.from("orders").update({ status }).eq("id", id)
 
       if (error) throw error
@@ -84,6 +89,7 @@ export function useOrders() {
 
   const updatePaymentStatus = async (id: string, paymentStatus: Order["payment_status"]) => {
     try {
+      const supabase = createClient()
       const { error } = await supabase.from("orders").update({ payment_status: paymentStatus }).eq("id", id)
 
       if (error) throw error
@@ -107,7 +113,7 @@ export function useOrders() {
       shipped: orders.filter((o) => o.status === "shipped").length,
       delivered: orders.filter((o) => o.status === "delivered").length,
       cancelled: orders.filter((o) => o.status === "cancelled").length,
-      totalRevenue: orders.filter((o) => o.payment_status === "paid").reduce((sum, o) => sum + o.amount, 0),
+      totalRevenue: orders.filter((o) => o.payment_status === "paid").reduce((sum, o) => sum + (o.amount || o.total_amount || 0), 0),
     }
     return stats
   }

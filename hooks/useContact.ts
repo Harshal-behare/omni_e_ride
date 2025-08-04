@@ -1,14 +1,17 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { supabase, type ContactInquiry } from "@/lib/supabase"
-import { useAuth } from "./useAuth"
+import { useState, useEffect } from 'react'
+import { createClient } from '@/utils/supabase/client'
+import { toast } from '@/hooks/use-toast'
+import { useAuth } from './useAuth'
+import type { ContactInquiry } from '@/types/database'
 
 export function useContact() {
   const [inquiries, setInquiries] = useState<ContactInquiry[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const { user, userProfile } = useAuth()
+  const supabase = createClient()
 
   useEffect(() => {
     if (user && userProfile && userProfile.user_type === "admin") {

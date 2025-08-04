@@ -3,8 +3,10 @@
 import type React from "react"
 
 import { useState } from "react"
-import { useTestRides } from "@/hooks/useTestRides"
-import { useDealers } from "@/hooks/useDealers"
+import { useAuth } from '@/hooks/useAuth'
+import { useTestRides } from '@/hooks/useTestRides'
+import { useDealers } from '@/hooks/useDealers'
+import type { TestRideBooking } from '@/types/database'
 import { useAuthContext } from "@/components/AuthProvider"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -29,8 +31,8 @@ interface TestRideModalProps {
 }
 
 export default function TestRideModal({ isOpen, onClose, model }: TestRideModalProps) {
-  const { user } = useAuthContext()
-  const { bookTestRide } = useTestRides()
+  const { user } = useAuth()
+  const { createBooking } = useTestRides()
   const { dealers } = useDealers()
 
   const [step, setStep] = useState(1)
@@ -56,19 +58,20 @@ export default function TestRideModal({ isOpen, onClose, model }: TestRideModalP
     setError("")
 
     try {
-      const { error } = await bookTestRide({
-        model_id: model.id,
-        dealer_id: formData.dealer_id || undefined,
+      const bookingData = {
+        model_id: model.id.toString(),
         preferred_date: format(formData.preferred_date, "yyyy-MM-dd"),
         preferred_time: formData.preferred_time,
-        customer_name: formData.customer_name,
-        customer_phone: formData.customer_phone,
-        customer_email: formData.customer_email,
-        notes: formData.notes,
-      })
+        status: 'pending' as const,
+        notes: formData.notes || null,
+        dealer_id: formData.dealer_id || null,
+        customer_id: user?.id || null,
+      }
+      
+      const { error } = await createBooking(bookingData)
 
       if (error) {
-        setError(error.message)
+        setError(typeof error === 'string' ? error : 'An error occurred')
         return
       }
 
@@ -230,22 +233,6 @@ export default function TestRideModal({ isOpen, onClose, model }: TestRideModalP
 
               <div className="space-y-2">
                 <Label>Preferred Dealer (Optional)</Label>
-                <Select onValueChange={(value) => setFormData((prev) => ({ ...prev, dealer_id: value }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select dealer or leave blank for auto-assignment" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {dealers.map((dealer) => (
-                      <SelectItem key={dealer.id} value={dealer.id}>
-                        {dealer.name} - {dealer.city}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="notes">Additional Notes (Optional)</Label>
                 <Textarea
                   id="notes"
                   placeholder="Any specific requirements or questions..."

@@ -1,8 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { supabase, type Inventory } from "@/lib/supabase"
-import { useAuth } from "./useAuth"
+import { useState, useEffect } from 'react'
+import { createClient } from '@/utils/supabase/client'
+import { toast } from '@/hooks/use-toast'
+import { useAuth } from './useAuth'
+import type { Inventory } from '@/types/database'
 
 export function useInventory() {
   const [inventory, setInventory] = useState<Inventory[]>([])
@@ -19,6 +21,7 @@ export function useInventory() {
   const fetchInventory = async () => {
     try {
       setLoading(true)
+      const supabase = createClient()
       let query = supabase
         .from("inventory")
         .select(`
@@ -53,14 +56,15 @@ export function useInventory() {
     try {
       setLoading(true)
 
+      const supabase = createClient()
       const { data, error } = await supabase
         .from("inventory")
         .insert([
           {
             dealer_id: user.id,
             model_id: modelId,
-            stock_quantity: stockQuantity,
-            reserved_quantity: 0,
+            stock: stockQuantity,
+            reserved_stock: 0,
           },
         ])
         .select()
@@ -81,12 +85,13 @@ export function useInventory() {
 
   const updateStock = async (id: string, newStockQuantity: number) => {
     try {
-      const { error } = await supabase.from("inventory").update({ stock_quantity: newStockQuantity }).eq("id", id)
+      const supabase = createClient()
+      const { error } = await supabase.from("inventory").update({ stock: newStockQuantity }).eq("id", id)
 
       if (error) throw error
 
       setInventory((prev) =>
-        prev.map((item) => (item.id === id ? { ...item, stock_quantity: newStockQuantity } : item)),
+        prev.map((item) => (item.id === id ? { ...item, stock: newStockQuantity } : item)),
       )
 
       return { error: null }
@@ -102,14 +107,15 @@ export function useInventory() {
       const item = inventory.find((i) => i.id === id)
       if (!item) return { error: "Item not found" }
 
-      const newReservedQuantity = item.reserved_quantity + quantity
+      const newReservedQuantity = (item.reserved_stock || 0) + quantity
 
-      const { error } = await supabase.from("inventory").update({ reserved_quantity: newReservedQuantity }).eq("id", id)
+      const supabase = createClient()
+      const { error } = await supabase.from("inventory").update({ reserved_stock: newReservedQuantity }).eq("id", id)
 
       if (error) throw error
 
       setInventory((prev) =>
-        prev.map((item) => (item.id === id ? { ...item, reserved_quantity: newReservedQuantity } : item)),
+        prev.map((item) => (item.id === id ? { ...item, reserved_stock: newReservedQuantity } : item)),
       )
 
       return { error: null }
@@ -123,16 +129,16 @@ export function useInventory() {
   const getInventoryStats = () => {
     const stats = {
       totalItems: inventory.length,
-      totalStock: inventory.reduce((sum, item) => sum + item.stock_quantity, 0),
-      totalReserved: inventory.reduce((sum, item) => sum + item.reserved_quantity, 0),
-      lowStock: inventory.filter((item) => item.stock_quantity - item.reserved_quantity <= 5).length,
-      outOfStock: inventory.filter((item) => item.stock_quantity - item.reserved_quantity <= 0).length,
+      totalStock: inventory.reduce((sum, item) => sum + (item.stock || 0), 0),
+      totalReserved: inventory.reduce((sum, item) => sum + (item.reserved_stock || 0), 0),
+      lowStock: inventory.filter((item) => (item.stock || 0) - (item.reserved_stock || 0) <= 5).length,
+      outOfStock: inventory.filter((item) => (item.stock || 0) - (item.reserved_stock || 0) <= 0).length,
     }
     return stats
   }
 
   const getLowStockItems = () => {
-    return inventory.filter((item) => item.stock_quantity - item.reserved_quantity <= 5)
+    return inventory.filter((item) => (item.stock || 0) - (item.reserved_stock || 0) <= 5)
   }
 
   return {
