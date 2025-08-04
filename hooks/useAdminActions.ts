@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabase"
 export function useAdminActions() {
   const [loading, setLoading] = useState(false)
 
-  const addPreApprovedEmail = async (email: string, role: "admin" | "dealer") => {
+  const addPreApprovedEmail = async (email: string, role: "admin" | "dealer" | "customer") => {
     setLoading(true)
     try {
       const { data, error } = await supabase
@@ -14,14 +14,17 @@ export function useAdminActions() {
         .insert({
           email,
           role,
-          created_by: (await supabase.auth.getUser()).data.user?.id,
         })
         .select()
         .single()
 
-      return { data, error }
+      if (error) {
+        return { success: false, error: error.message }
+      }
+
+      return { success: true, data }
     } catch (error) {
-      return { data: null, error }
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
     } finally {
       setLoading(false)
     }
@@ -66,16 +69,18 @@ export function useAdminActions() {
         .select()
         .single()
 
+      if (error) {
+        return { success: false, error: error.message }
+      }
+
       // If changing to dealer, create dealer record
-      if (newRole === "dealer" && !error) {
+      if (newRole === "dealer" && data) {
         const { error: dealerError } = await supabase.from("dealers").insert({
           user_id: userId,
-          name: data.full_name,
-          location: "TBD",
-          address: "Address to be updated",
+          business_name: data.full_name,
+          business_address: "Address to be updated",
           phone: data.phone || "",
           email: data.email,
-          manager_name: data.full_name,
           status: "pending",
         })
 
@@ -84,9 +89,9 @@ export function useAdminActions() {
         }
       }
 
-      return { data, error }
+      return { success: true, data }
     } catch (error) {
-      return { data: null, error }
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
     } finally {
       setLoading(false)
     }

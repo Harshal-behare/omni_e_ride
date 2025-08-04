@@ -53,24 +53,18 @@ function LoginPageContent() {
     }
   }, [searchParams])
 
-  // Redirect if already logged in
+  // Redirect if already logged in - optimized to prevent unnecessary redirects
   useEffect(() => {
-    if (user && userProfile) {
-      switch (userProfile.user_type) {
-        case "admin":
-          router.push("/admin/dashboard")
-          break
-        case "dealer":
-          router.push("/dealer/dashboard")
-          break
-        case "customer":
-          router.push("/customer/dashboard")
-          break
-        default:
-          router.push("/")
-      }
+    if (!authLoading && user && userProfile) {
+      const redirectPath = {
+        "admin": "/admin/dashboard",
+        "dealer": "/dealer/dashboard", 
+        "customer": "/customer/dashboard"
+      }[userProfile.user_type] || "/"
+      
+      router.replace(redirectPath) // Use replace instead of push to avoid back button issues
     }
-  }, [user, userProfile, router])
+  }, [user, userProfile, authLoading, router])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -137,12 +131,26 @@ function LoginPageContent() {
     }
   }
 
+  // Show loading only for a reasonable time, then show login form
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
         <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p>Loading...</p>
+          <div className="w-16 h-16 border-4 border-[#3CB043] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Checking authentication...</p>
+          <p className="text-sm text-gray-400 mt-2">This should only take a moment</p>
+        </div>
+      </div>
+    )
+  }
+
+  // If user is logged in but still loading profile, show a different loading state
+  if (user && !userProfile && !authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-[#3CB043] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Setting up your dashboard...</p>
         </div>
       </div>
     )

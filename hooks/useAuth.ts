@@ -10,17 +10,32 @@ export function useAuth() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Get initial session
+    // Get initial session with timeout
     const getInitialSession = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-      setUser(session?.user ?? null)
+      try {
+        // Add timeout to prevent hanging on slow connections
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Session timeout')), 3000)
+        )
+        
+        const sessionPromise = supabase.auth.getSession()
+        
+        const {
+          data: { session },
+        } = await Promise.race([sessionPromise, timeoutPromise]) as any
+        
+        setUser(session?.user ?? null)
 
-      if (session?.user) {
-        await fetchUserProfile(session.user.id)
+        if (session?.user) {
+          await fetchUserProfile(session.user.id)
+        } else {
+          // No session, stop loading immediately
+          setLoading(false)
+        }
+      } catch (error) {
+        console.error('Session initialization error:', error)
+        setLoading(false)
       }
-      setLoading(false)
     }
 
     getInitialSession()
@@ -44,15 +59,30 @@ export function useAuth() {
 
   const fetchUserProfile = async (userId: string) => {
     try {
-      const { data, error } = await supabase.from("user_profiles").select("*").eq("id", userId).single()
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
+      )
+      
+      const fetchPromise = supabase
+        .from("user_profiles")
+        .select("*")
+        .eq("id", userId)
+        .single()
+
+      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any
 
       if (error) {
         console.error("Error fetching user profile:", error)
+        // Set loading to false even on error to prevent infinite loading
+        setLoading(false)
         return
       }
       setUserProfile(data)
     } catch (error) {
       console.error("Error fetching user profile:", error)
+      // Ensure loading is set to false on error
+      setLoading(false)
     }
   }
 
@@ -97,23 +127,18 @@ export function useAuth() {
 
   const signUp = async (email: string, password: string, fullName: string, phone?: string) => {
     try {
-      // Check if email is pre-approved
-      const { data: preApprovedData } = await supabase
-        .from("pre_approved_emails")
-        .select("role")
-        .eq("email", email)
-        .eq("used", false)
-        .single()
-
+      // Public signup - all users default to customer role
+      // Only admin/dealer emails in pre_approved_emails will get special roles
+      
       // Sign up with email confirmation required
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: {
             full_name: fullName,
             phone: phone || "",
-            role: preApprovedData?.role || "customer",
           },
         },
       })
@@ -128,13 +153,8 @@ export function useAuth() {
 
   const signUpWithOtp = async (email: string, fullName: string, phone?: string) => {
     try {
-      // Check if email is pre-approved
-      const { data: preApprovedData } = await supabase
-        .from("pre_approved_emails")
-        .select("role")
-        .eq("email", email)
-        .eq("used", false)
-        .single()
+      // Public signup - all users default to customer role
+      // Only admin/dealer emails in pre_approved_emails will get special roles
 
       const { data, error } = await supabase.auth.signInWithOtp({
         email,
@@ -142,7 +162,6 @@ export function useAuth() {
           data: {
             full_name: fullName,
             phone: phone || "",
-            role: preApprovedData?.role || "customer",
           },
           emailRedirectTo: `${window.location.origin}/auth/callback`,
         },

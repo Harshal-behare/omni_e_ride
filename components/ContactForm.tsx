@@ -14,7 +14,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, CheckCircle, Phone, Mail, MapPin } from "lucide-react"
 
 export default function ContactForm() {
-  const { submitInquiry } = useContact()
+  const { createInquiry } = useContact()
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState("")
@@ -44,10 +44,10 @@ export default function ContactForm() {
     setError("")
 
     try {
-      const { error } = await submitInquiry(formData)
+      const { error } = await createInquiry(formData)
 
       if (error) {
-        setError(error.message)
+        setError(error)
         return
       }
 

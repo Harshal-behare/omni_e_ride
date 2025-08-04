@@ -32,17 +32,27 @@ CREATE TABLE public.customer_reviews (
 );
 CREATE TABLE public.dealer_applications (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
-  business_name character varying NOT NULL,
-  business_address text NOT NULL,
-  contact_person character varying NOT NULL,
+  full_name character varying NOT NULL,
   email character varying NOT NULL,
   phone character varying NOT NULL,
-  business_license character varying NOT NULL,
-  experience_years integer NOT NULL,
+  business_name character varying NOT NULL,
+  business_address text NOT NULL,
+  city character varying NOT NULL,
+  state character varying NOT NULL,
+  pincode character varying NOT NULL,
+  business_type character varying NOT NULL,
+  experience_years integer,
+  investment_capacity character varying NOT NULL,
+  expected_sales integer,
+  territory_preference ARRAY,
+  additional_info text,
   status USER-DEFINED DEFAULT 'pending'::dealer_status,
+  reviewed_by uuid,
+  reviewed_at timestamp with time zone,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT dealer_applications_pkey PRIMARY KEY (id)
+  CONSTRAINT dealer_applications_pkey PRIMARY KEY (id),
+  CONSTRAINT dealer_applications_reviewed_by_fkey FOREIGN KEY (reviewed_by) REFERENCES public.user_profiles(id)
 );
 CREATE TABLE public.dealer_commissions (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -54,8 +64,8 @@ CREATE TABLE public.dealer_commissions (
   paid_date timestamp with time zone,
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT dealer_commissions_pkey PRIMARY KEY (id),
-  CONSTRAINT dealer_commissions_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id),
-  CONSTRAINT dealer_commissions_dealer_id_fkey FOREIGN KEY (dealer_id) REFERENCES public.dealers(id)
+  CONSTRAINT dealer_commissions_dealer_id_fkey FOREIGN KEY (dealer_id) REFERENCES public.dealers(id),
+  CONSTRAINT dealer_commissions_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id)
 );
 CREATE TABLE public.dealer_sales (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -71,11 +81,11 @@ CREATE TABLE public.dealer_sales (
 );
 CREATE TABLE public.dealers (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
-  user_id uuid,
+  user_id uuid UNIQUE,
   business_name character varying NOT NULL,
   business_address text NOT NULL,
   phone character varying NOT NULL,
-  email character varying NOT NULL,
+  email character varying NOT NULL UNIQUE,
   status USER-DEFINED DEFAULT 'pending'::dealer_status,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
@@ -151,6 +161,18 @@ CREATE TABLE public.pre_approved_emails (
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT pre_approved_emails_pkey PRIMARY KEY (id)
 );
+CREATE TABLE public.role_change_history (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  previous_role USER-DEFINED NOT NULL,
+  new_role USER-DEFINED NOT NULL,
+  changed_by uuid NOT NULL,
+  change_reason text,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT role_change_history_pkey PRIMARY KEY (id),
+  CONSTRAINT role_change_history_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.user_profiles(id),
+  CONSTRAINT role_change_history_changed_by_fkey FOREIGN KEY (changed_by) REFERENCES public.user_profiles(id)
+);
 CREATE TABLE public.service_bookings (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   customer_id uuid,
@@ -189,14 +211,18 @@ CREATE TABLE public.test_ride_bookings (
 );
 CREATE TABLE public.user_profiles (
   id uuid NOT NULL,
-  email character varying NOT NULL,
+  email character varying NOT NULL UNIQUE,
   full_name character varying NOT NULL,
   phone character varying,
   user_type USER-DEFINED DEFAULT 'customer'::user_type,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
+  role_changed_by uuid,
+  role_changed_at timestamp with time zone,
+  previous_role USER-DEFINED,
   CONSTRAINT user_profiles_pkey PRIMARY KEY (id),
-  CONSTRAINT user_profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
+  CONSTRAINT user_profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id),
+  CONSTRAINT user_profiles_role_changed_by_fkey FOREIGN KEY (role_changed_by) REFERENCES public.user_profiles(id)
 );
 CREATE TABLE public.warranties (
   id uuid NOT NULL DEFAULT gen_random_uuid(),

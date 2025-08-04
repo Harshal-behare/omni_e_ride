@@ -132,14 +132,23 @@ CREATE TABLE public.contact_inquiries (
 -- Dealer Applications Table
 CREATE TABLE public.dealer_applications (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    business_name VARCHAR(255) NOT NULL,
-    business_address TEXT NOT NULL,
-    contact_person VARCHAR(255) NOT NULL,
+    full_name VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL,
     phone VARCHAR(20) NOT NULL,
-    business_license VARCHAR(255) NOT NULL,
-    experience_years INTEGER NOT NULL,
+    business_name VARCHAR(255) NOT NULL,
+    business_address TEXT NOT NULL,
+    city VARCHAR(100) NOT NULL,
+    state VARCHAR(100) NOT NULL,
+    pincode VARCHAR(20) NOT NULL,
+    business_type VARCHAR(100) NOT NULL,
+    experience_years INTEGER,
+    investment_capacity VARCHAR(100) NOT NULL,
+    expected_sales INTEGER,
+    territory_preference TEXT[],
+    additional_info TEXT,
     status dealer_status DEFAULT 'pending',
+    reviewed_by UUID REFERENCES public.user_profiles(id) ON DELETE SET NULL,
+    reviewed_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
