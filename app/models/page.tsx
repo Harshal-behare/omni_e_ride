@@ -12,10 +12,13 @@ import Link from "next/link"
 import Image from "next/image"
 
 export default function Models() {
-  const { models, loading, error, fetchModels } = useModels()
+  const { models, loading, error, refetch } = useModels()
 
+  // Fetch models once on mount to avoid continuous re-renders that caused the flicker
   useEffect(() => {
-    fetchModels()
+    refetch()
+    // intentionally leave dependency array empty – `refetch` reference is stable enough for a one-time call
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   if (loading) {
@@ -40,7 +43,7 @@ export default function Models() {
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
             <p className="text-red-600 mb-4">Error loading models: {error}</p>
-            <Button onClick={fetchModels}>Try Again</Button>
+            <Button onClick={refetch}>Try Again</Button>
           </div>
         </div>
         <Footer />
@@ -73,7 +76,7 @@ export default function Models() {
                   <div className="relative h-64 bg-gray-100">
                     <Image
                       src={
-                        model.image_url ||
+                        model.main_image ||
                         `/placeholder.svg?height=300&width=400&text=${encodeURIComponent(model.name)}`
                       }
                       alt={model.name}
@@ -97,7 +100,7 @@ export default function Models() {
                         <Battery className="h-4 w-4 text-[#3CB043]" />
                         <div>
                           <p className="text-xs text-gray-500">Range</p>
-                          <p className="text-sm font-medium">{model.range}</p>
+                          <p className="text-sm font-medium">{model.specifications.range}</p>
                         </div>
                       </div>
 
@@ -105,7 +108,7 @@ export default function Models() {
                         <Gauge className="h-4 w-4 text-[#3CB043]" />
                         <div>
                           <p className="text-xs text-gray-500">Top Speed</p>
-                          <p className="text-sm font-medium">{model.top_speed}</p>
+                          <p className="text-sm font-medium">{model.specifications.top_speed}</p>
                         </div>
                       </div>
 
@@ -113,7 +116,7 @@ export default function Models() {
                         <Clock className="h-4 w-4 text-[#3CB043]" />
                         <div>
                           <p className="text-xs text-gray-500">Charging</p>
-                          <p className="text-sm font-medium">{model.charging_time}</p>
+                          <p className="text-sm font-medium">{model.specifications.charging_time}</p>
                         </div>
                       </div>
 
@@ -121,24 +124,24 @@ export default function Models() {
                         <Zap className="h-4 w-4 text-[#3CB043]" />
                         <div>
                           <p className="text-xs text-gray-500">Battery</p>
-                          <p className="text-sm font-medium">{model.battery}</p>
+                          <p className="text-sm font-medium">{model.specifications.battery}</p>
                         </div>
                       </div>
                     </div>
 
                     {/* Features */}
-                    {model.features && model.features.length > 0 && (
+                    {model.specifications.features && model.specifications.features.length > 0 && (
                       <div>
                         <p className="text-sm font-medium text-gray-700 mb-2">Key Features:</p>
                         <div className="flex flex-wrap gap-1">
-                          {model.features.slice(0, 3).map((feature, index) => (
+                          {model.specifications.features.slice(0, 3).map((feature: string, index: number) => (
                             <Badge key={index} variant="outline" className="text-xs">
                               {feature}
                             </Badge>
                           ))}
-                          {model.features.length > 3 && (
+                          {model.specifications.features.length > 3 && (
                             <Badge variant="outline" className="text-xs">
-                              +{model.features.length - 3} more
+                              +{model.specifications.features.length - 3} more
                             </Badge>
                           )}
                         </div>
@@ -146,11 +149,11 @@ export default function Models() {
                     )}
 
                     {/* Colors */}
-                    {model.colors && model.colors.length > 0 && (
+                    {model.specifications.colors && model.specifications.colors.length > 0 && (
                       <div>
                         <p className="text-sm font-medium text-gray-700 mb-2">Available Colors:</p>
                         <div className="flex flex-wrap gap-1">
-                          {model.colors.map((color, index) => (
+                          {model.specifications.colors.map((color: string, index: number) => (
                             <Badge key={index} variant="secondary" className="text-xs">
                               {color}
                             </Badge>

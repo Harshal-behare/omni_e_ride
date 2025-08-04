@@ -1,176 +1,51 @@
+"use client"
+
+import { useState, useEffect } from "react"
 import { notFound } from "next/navigation"
 import Navbar from "../../../components/Navbar"
 import Footer from "../../../components/Footer"
-import ProductDetails from "../../../components/ProductDetails"
-import CostCalculator from "../../../components/CostCalculator"
-
-const models = [
-  {
-    id: 1,
-    name: "Omni Swift",
-    price: 63000,
-    range: "80 km",
-    topSpeed: "45 km/h",
-    chargingTime: "4-5 hours",
-    battery: "48V 24Ah",
-    acceleration: "0-40 km/h in 4.2 sec",
-    colors: ["Pearl White", "Matte Black", "Electric Blue"],
-    features: ["LED Headlights", "Digital Display", "Mobile Charging", "Anti-theft Alarm", "Regenerative Braking"],
-    specifications: {
-      motor: "1.5 kW BLDC Motor",
-      batteryType: "Lithium-ion",
-      weight: "85 kg",
-      loadCapacity: "150 kg",
-      brakes: "Disc/Drum",
-      tyres: "90/90-12 Tubeless",
-      groundClearance: "165 mm",
-      wheelbase: "1285 mm",
-    },
-    description:
-      "Perfect for daily commuting with excellent range and performance. The Omni Swift combines efficiency with style, making it ideal for urban mobility.",
-  },
-  {
-    id: 2,
-    name: "Omni Power",
-    price: 78000,
-    range: "100 km",
-    topSpeed: "60 km/h",
-    chargingTime: "5-6 hours",
-    battery: "60V 30Ah",
-    acceleration: "0-40 km/h in 3.8 sec",
-    colors: ["Pearl White", "Matte Black", "Electric Blue", "Crimson Red"],
-    features: [
-      "LED Headlights",
-      "Digital Display",
-      "Mobile Charging",
-      "Anti-theft Alarm",
-      "Reverse Mode",
-      "Bluetooth Connectivity",
-    ],
-    specifications: {
-      motor: "2.0 kW BLDC Motor",
-      batteryType: "Lithium-ion",
-      weight: "90 kg",
-      loadCapacity: "150 kg",
-      brakes: "Disc/Disc",
-      tyres: "90/90-12 Tubeless",
-      groundClearance: "170 mm",
-      wheelbase: "1290 mm",
-    },
-    description:
-      "Enhanced performance with longer range and advanced features. The Omni Power delivers superior acceleration and connectivity for modern riders.",
-  },
-  {
-    id: 3,
-    name: "Omni Elite",
-    price: 95000,
-    range: "120 km",
-    topSpeed: "70 km/h",
-    chargingTime: "6-7 hours",
-    battery: "72V 35Ah",
-    acceleration: "0-40 km/h in 3.5 sec",
-    colors: ["Pearl White", "Matte Black", "Electric Blue", "Crimson Red", "Silver Grey"],
-    features: [
-      "LED Headlights",
-      "Digital Display",
-      "Mobile Charging",
-      "Anti-theft Alarm",
-      "Reverse Mode",
-      "Cruise Control",
-      "GPS Navigation",
-    ],
-    specifications: {
-      motor: "2.5 kW BLDC Motor",
-      batteryType: "Lithium-ion",
-      weight: "95 kg",
-      loadCapacity: "150 kg",
-      brakes: "Disc/Disc",
-      tyres: "100/80-12 Tubeless",
-      groundClearance: "175 mm",
-      wheelbase: "1295 mm",
-    },
-    description:
-      "Premium electric scooter with advanced features and exceptional range. The Omni Elite offers luxury and performance for discerning riders.",
-  },
-  {
-    id: 4,
-    name: "Omni Pro",
-    price: 110000,
-    range: "150 km",
-    topSpeed: "80 km/h",
-    chargingTime: "7-8 hours",
-    battery: "72V 40Ah",
-    acceleration: "0-40 km/h in 3.2 sec",
-    colors: ["Pearl White", "Matte Black", "Electric Blue", "Crimson Red", "Silver Grey", "Golden Yellow"],
-    features: [
-      "LED Headlights",
-      "Digital Display",
-      "Mobile Charging",
-      "Anti-theft Alarm",
-      "Reverse Mode",
-      "Cruise Control",
-      "GPS Navigation",
-      "Smart Connectivity",
-    ],
-    specifications: {
-      motor: "3.0 kW BLDC Motor",
-      batteryType: "Lithium-ion",
-      weight: "100 kg",
-      loadCapacity: "150 kg",
-      brakes: "Disc/Disc",
-      tyres: "100/80-12 Tubeless",
-      groundClearance: "180 mm",
-      wheelbase: "1300 mm",
-    },
-    description:
-      "Professional-grade electric scooter with maximum range and power. The Omni Pro is designed for long-distance travel and commercial use.",
-  },
-  {
-    id: 5,
-    name: "Omni Max",
-    price: 125000,
-    range: "180 km",
-    topSpeed: "90 km/h",
-    chargingTime: "8-9 hours",
-    battery: "84V 45Ah",
-    acceleration: "0-40 km/h in 2.9 sec",
-    colors: [
-      "Pearl White",
-      "Matte Black",
-      "Electric Blue",
-      "Crimson Red",
-      "Silver Grey",
-      "Golden Yellow",
-      "Metallic Purple",
-    ],
-    features: [
-      "LED Headlights",
-      "Digital Display",
-      "Mobile Charging",
-      "Anti-theft Alarm",
-      "Reverse Mode",
-      "Cruise Control",
-      "GPS Navigation",
-      "Bluetooth Connectivity",
-      "Fast Charging",
-    ],
-    specifications: {
-      motor: "3.5 kW BLDC Motor",
-      batteryType: "Lithium-ion",
-      weight: "105 kg",
-      loadCapacity: "150 kg",
-      brakes: "Disc/Disc",
-      tyres: "110/70-12 Tubeless",
-      groundClearance: "185 mm",
-      wheelbase: "1305 mm",
-    },
-    description:
-      "The ultimate electric scooter with maximum performance and range. The Omni Max represents the pinnacle of electric mobility technology.",
-  },
-]
+import { useModels, Model } from "@/hooks/useModels"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Loader2, Battery, Zap, Clock, Gauge, ArrowLeft, Heart, Share2 } from "lucide-react"
+import Link from "next/link"
+import Image from "next/image"
 
 export default function ModelDetail({ params }: { params: { id: string } }) {
-  const model = models.find((m) => m.id === Number.parseInt(params.id))
+  const { getModelById } = useModels()
+  const [model, setModel] = useState<Model | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [selectedImage, setSelectedImage] = useState(0)
+  const [selectedColor, setSelectedColor] = useState(0)
+
+  useEffect(() => {
+    const fetchModel = async () => {
+      setLoading(true)
+      const fetchedModel = await getModelById(params.id)
+      if (fetchedModel) {
+        setModel(fetchedModel)
+      }
+      setLoading(false)
+    }
+
+    fetchModel()
+  }, [params.id, getModelById])
+
+  if (loading) {
+    return (
+      <>
+        <Navbar />
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <p>Loading model details...</p>
+          </div>
+        </div>
+        <Footer />
+      </>
+    )
+  }
 
   if (!model) {
     notFound()
@@ -179,12 +54,202 @@ export default function ModelDetail({ params }: { params: { id: string } }) {
   return (
     <>
       <Navbar />
+      <div className="min-h-screen bg-gray-50">
+        {/* Breadcrumb */}
+        <div className="bg-white border-b">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex items-center space-x-2 text-sm text-gray-600">
+              <Link href="/" className="hover:text-blue-600">Home</Link>
+              <span>/</span>
+              <Link href="/models" className="hover:text-blue-600">Models</Link>
+              <span>/</span>
+              <span className="text-gray-900">{model.name}</span>
+            </div>
+          </div>
+        </div>
 
-      <div className="pt-20">
-        <ProductDetails model={model} />
-        <CostCalculator model={model} />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="grid lg:grid-cols-2 gap-12">
+            {/* Image Gallery */}
+            <div className="space-y-4">
+              <div className="aspect-square rounded-lg overflow-hidden bg-white">
+                <Image
+                  src={model.gallery[selectedImage] || model.main_image}
+                  alt={model.name}
+                  width={600}
+                  height={600}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="grid grid-cols-5 gap-2">
+                {model.gallery.map((image, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setSelectedImage(index)}
+                    className={`aspect-square rounded-lg overflow-hidden border-2 ${
+                      selectedImage === index ? 'border-blue-600' : 'border-gray-200'
+                    }`}
+                  >
+                    <Image
+                      src={image}
+                      alt={`${model.name} ${index + 1}`}
+                      width={120}
+                      height={120}
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Product Details */}
+            <div className="space-y-6">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">{model.name}</h1>
+                <p className="text-xl text-blue-600 font-semibold">₹{model.price.toLocaleString()}</p>
+              </div>
+
+              <p className="text-gray-600 leading-relaxed">{model.description}</p>
+
+              {/* Key Specifications */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center space-x-3 p-3 bg-white rounded-lg">
+                  <Battery className="h-5 w-5 text-green-600" />
+                  <div>
+                    <p className="text-sm text-gray-600">Range</p>
+                    <p className="font-semibold">{model.specifications.range}</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-3 p-3 bg-white rounded-lg">
+                  <Gauge className="h-5 w-5 text-blue-600" />
+                  <div>
+                    <p className="text-sm text-gray-600">Top Speed</p>
+                    <p className="font-semibold">{model.specifications.top_speed}</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-3 p-3 bg-white rounded-lg">
+                  <Clock className="h-5 w-5 text-orange-600" />
+                  <div>
+                    <p className="text-sm text-gray-600">Charging Time</p>
+                    <p className="font-semibold">{model.specifications.charging_time}</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-3 p-3 bg-white rounded-lg">
+                  <Zap className="h-5 w-5 text-yellow-600" />
+                  <div>
+                    <p className="text-sm text-gray-600">Motor Power</p>
+                    <p className="font-semibold">{model.specifications.motor_power}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Colors */}
+              {model.specifications.colors && model.specifications.colors.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-3">Available Colors</h3>
+                  <div className="flex space-x-2">
+                    {model.specifications.colors.map((color, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setSelectedColor(index)}
+                        className={`px-4 py-2 rounded-lg border-2 text-sm ${
+                          selectedColor === index
+                            ? 'border-blue-600 bg-blue-50 text-blue-600'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        {color}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Features */}
+              {model.specifications.features && model.specifications.features.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-3">Key Features</h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    {model.specifications.features.map((feature, index) => (
+                      <div key={index} className="flex items-center space-x-2">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <span className="text-sm text-gray-700">{feature}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="space-y-3">
+                <Link href="/test-ride" className="w-full">
+                  <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3">
+                    Book Test Ride
+                  </Button>
+                </Link>
+                <Link href="/contact" className="w-full">
+                  <Button variant="outline" className="w-full py-3">
+                    Contact Dealer
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          {/* Detailed Specifications */}
+          <div className="mt-16">
+            <Card>
+              <CardHeader>
+                <CardTitle>Detailed Specifications</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid md:grid-cols-2 gap-8">
+                  <div className="space-y-4">
+                    <h4 className="font-semibold text-gray-900">Performance</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Range:</span>
+                        <span>{model.specifications.range}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Top Speed:</span>
+                        <span>{model.specifications.top_speed}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Motor Power:</span>
+                        <span>{model.specifications.motor_power}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Battery:</span>
+                        <span>{model.specifications.battery}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Charging Time:</span>
+                        <span>{model.specifications.charging_time}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <h4 className="font-semibold text-gray-900">Physical</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Weight:</span>
+                        <span>{model.specifications.weight}</span>
+                      </div>
+                      {model.specifications.cargo_capacity && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Cargo Capacity:</span>
+                          <span>{model.specifications.cargo_capacity}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
-
       <Footer />
     </>
   )
