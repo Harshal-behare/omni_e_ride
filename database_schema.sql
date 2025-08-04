@@ -25,10 +25,10 @@ CREATE TABLE public.customer_reviews (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT customer_reviews_pkey PRIMARY KEY (id),
-  CONSTRAINT customer_reviews_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id),
   CONSTRAINT customer_reviews_dealer_id_fkey FOREIGN KEY (dealer_id) REFERENCES public.dealers(id),
-  CONSTRAINT customer_reviews_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.user_profiles(id),
-  CONSTRAINT customer_reviews_model_id_fkey FOREIGN KEY (model_id) REFERENCES public.models(id)
+  CONSTRAINT customer_reviews_model_id_fkey FOREIGN KEY (model_id) REFERENCES public.models(id),
+  CONSTRAINT customer_reviews_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id),
+  CONSTRAINT customer_reviews_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.user_profiles(id)
 );
 CREATE TABLE public.dealer_applications (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -64,8 +64,8 @@ CREATE TABLE public.dealer_commissions (
   paid_date timestamp with time zone,
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT dealer_commissions_pkey PRIMARY KEY (id),
-  CONSTRAINT dealer_commissions_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id),
-  CONSTRAINT dealer_commissions_dealer_id_fkey FOREIGN KEY (dealer_id) REFERENCES public.dealers(id)
+  CONSTRAINT dealer_commissions_dealer_id_fkey FOREIGN KEY (dealer_id) REFERENCES public.dealers(id),
+  CONSTRAINT dealer_commissions_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id)
 );
 CREATE TABLE public.dealer_sales (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -76,8 +76,8 @@ CREATE TABLE public.dealer_sales (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT dealer_sales_pkey PRIMARY KEY (id),
-  CONSTRAINT dealer_sales_dealer_id_fkey FOREIGN KEY (dealer_id) REFERENCES public.dealers(id),
-  CONSTRAINT dealer_sales_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id)
+  CONSTRAINT dealer_sales_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id),
+  CONSTRAINT dealer_sales_dealer_id_fkey FOREIGN KEY (dealer_id) REFERENCES public.dealers(id)
 );
 CREATE TABLE public.dealers (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -106,9 +106,9 @@ CREATE TABLE public.financial_transactions (
   notes text,
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT financial_transactions_pkey PRIMARY KEY (id),
-  CONSTRAINT financial_transactions_dealer_id_fkey FOREIGN KEY (dealer_id) REFERENCES public.dealers(id),
   CONSTRAINT financial_transactions_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.user_profiles(id),
-  CONSTRAINT financial_transactions_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id)
+  CONSTRAINT financial_transactions_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id),
+  CONSTRAINT financial_transactions_dealer_id_fkey FOREIGN KEY (dealer_id) REFERENCES public.dealers(id)
 );
 CREATE TABLE public.inventory (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -120,8 +120,8 @@ CREATE TABLE public.inventory (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT inventory_pkey PRIMARY KEY (id),
-  CONSTRAINT inventory_dealer_id_fkey FOREIGN KEY (dealer_id) REFERENCES public.dealers(id),
-  CONSTRAINT inventory_model_id_fkey FOREIGN KEY (model_id) REFERENCES public.models(id)
+  CONSTRAINT inventory_model_id_fkey FOREIGN KEY (model_id) REFERENCES public.models(id),
+  CONSTRAINT inventory_dealer_id_fkey FOREIGN KEY (dealer_id) REFERENCES public.dealers(id)
 );
 CREATE TABLE public.models (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -148,18 +148,9 @@ CREATE TABLE public.orders (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT orders_pkey PRIMARY KEY (id),
-  CONSTRAINT orders_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.user_profiles(id),
+  CONSTRAINT orders_dealer_id_fkey FOREIGN KEY (dealer_id) REFERENCES public.dealers(id),
   CONSTRAINT orders_model_id_fkey FOREIGN KEY (model_id) REFERENCES public.models(id),
-  CONSTRAINT orders_dealer_id_fkey FOREIGN KEY (dealer_id) REFERENCES public.dealers(id)
-);
-CREATE TABLE public.pre_approved_emails (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  email character varying NOT NULL UNIQUE,
-  role USER-DEFINED NOT NULL,
-  used boolean DEFAULT false,
-  used_at timestamp with time zone,
-  created_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT pre_approved_emails_pkey PRIMARY KEY (id)
+  CONSTRAINT orders_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.user_profiles(id)
 );
 CREATE TABLE public.role_change_history (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -170,8 +161,8 @@ CREATE TABLE public.role_change_history (
   change_reason text,
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT role_change_history_pkey PRIMARY KEY (id),
-  CONSTRAINT role_change_history_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.user_profiles(id),
-  CONSTRAINT role_change_history_changed_by_fkey FOREIGN KEY (changed_by) REFERENCES public.user_profiles(id)
+  CONSTRAINT role_change_history_changed_by_fkey FOREIGN KEY (changed_by) REFERENCES public.user_profiles(id),
+  CONSTRAINT role_change_history_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.user_profiles(id)
 );
 CREATE TABLE public.service_bookings (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -205,8 +196,8 @@ CREATE TABLE public.test_ride_bookings (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT test_ride_bookings_pkey PRIMARY KEY (id),
-  CONSTRAINT test_ride_bookings_dealer_id_fkey FOREIGN KEY (dealer_id) REFERENCES public.dealers(id),
   CONSTRAINT test_ride_bookings_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.user_profiles(id),
+  CONSTRAINT test_ride_bookings_dealer_id_fkey FOREIGN KEY (dealer_id) REFERENCES public.dealers(id),
   CONSTRAINT test_ride_bookings_model_id_fkey FOREIGN KEY (model_id) REFERENCES public.models(id)
 );
 CREATE TABLE public.user_profiles (
@@ -238,6 +229,6 @@ CREATE TABLE public.warranties (
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT warranties_pkey PRIMARY KEY (id),
   CONSTRAINT warranties_vehicle_model_id_fkey FOREIGN KEY (vehicle_model_id) REFERENCES public.models(id),
-  CONSTRAINT warranties_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.user_profiles(id),
-  CONSTRAINT warranties_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id)
+  CONSTRAINT warranties_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id),
+  CONSTRAINT warranties_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.user_profiles(id)
 );
