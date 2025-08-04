@@ -61,8 +61,8 @@ export default function Home() {
                   <div className="relative h-48 bg-gray-100">
                     <Image
                       src={
-                        model.image_url ||
-                        `/placeholder.svg?height=300&width=400&text=${encodeURIComponent(model.name) || "/placeholder.svg"}`
+                        model.main_image ||
+                        `/placeholder.svg?height=300&width=400&text=${encodeURIComponent(model.name)}`
                       }
                       alt={model.name}
                       fill
@@ -80,19 +80,19 @@ export default function Home() {
                     <div className="grid grid-cols-2 gap-3 mb-4">
                       <div className="flex items-center space-x-2">
                         <Battery className="h-4 w-4 text-[#3CB043]" />
-                        <span className="text-sm">{model.range}</span>
+                        <span className="text-sm">{model.specifications?.range || 'N/A'}</span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <Gauge className="h-4 w-4 text-[#3CB043]" />
-                        <span className="text-sm">{model.top_speed}</span>
+                        <span className="text-sm">{model.specifications?.top_speed || 'N/A'}</span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <Clock className="h-4 w-4 text-[#3CB043]" />
-                        <span className="text-sm">{model.charging_time}</span>
+                        <span className="text-sm">{model.specifications?.charging_time || 'N/A'}</span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <Zap className="h-4 w-4 text-[#3CB043]" />
-                        <span className="text-sm">{model.battery}</span>
+                        <span className="text-sm">{model.specifications?.battery || 'N/A'}</span>
                       </div>
                     </div>
 

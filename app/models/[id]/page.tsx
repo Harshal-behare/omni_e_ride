@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, use } from "react"
 import { notFound } from "next/navigation"
 import Navbar from "../../../components/Navbar"
 import Footer from "../../../components/Footer"
@@ -12,7 +12,9 @@ import { Loader2, Battery, Zap, Clock, Gauge, ArrowLeft, Heart, Share2 } from "l
 import Link from "next/link"
 import Image from "next/image"
 
-export default function ModelDetail({ params }: { params: { id: string } }) {
+export default function ModelDetail({ params }: { params: Promise<{ id: string }> }) {
+  // Unwrap params using React.use() to fix hydration mismatch
+  const resolvedParams = use(params)
   const { getModelById } = useModels()
   const [model, setModel] = useState<Model | null>(null)
   const [loading, setLoading] = useState(true)
@@ -22,7 +24,7 @@ export default function ModelDetail({ params }: { params: { id: string } }) {
   useEffect(() => {
     const fetchModel = async () => {
       setLoading(true)
-      const fetchedModel = await getModelById(params.id)
+      const fetchedModel = await getModelById(resolvedParams.id)
       if (fetchedModel) {
         setModel(fetchedModel)
       }
@@ -30,7 +32,7 @@ export default function ModelDetail({ params }: { params: { id: string } }) {
     }
 
     fetchModel()
-  }, [params.id, getModelById])
+  }, [resolvedParams.id, getModelById])
 
   if (loading) {
     return (
@@ -48,8 +50,27 @@ export default function ModelDetail({ params }: { params: { id: string } }) {
   }
 
   if (!model) {
-    notFound()
+    return (
+      <>
+        <Navbar />
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-gray-600 mb-4">Model not found</p>
+            <Link href="/models">
+              <Button>Back to Models</Button>
+            </Link>
+          </div>
+        </div>
+        <Footer />
+      </>
+    )
   }
+
+  // Ensure specifications exist and provide defaults
+  const specs = model.specifications || {}
+  const features = specs.features || []
+  const colors = specs.colors || []
+  const gallery = model.gallery || []
 
   return (
     <>
@@ -74,32 +95,34 @@ export default function ModelDetail({ params }: { params: { id: string } }) {
             <div className="space-y-4">
               <div className="aspect-square rounded-lg overflow-hidden bg-white">
                 <Image
-                  src={model.gallery[selectedImage] || model.main_image}
+                  src={gallery[selectedImage] || model.main_image || `/placeholder.svg?height=600&width=600&text=${encodeURIComponent(model.name)}`}
                   alt={model.name}
                   width={600}
                   height={600}
                   className="w-full h-full object-cover"
                 />
               </div>
-              <div className="grid grid-cols-5 gap-2">
-                {model.gallery.map((image, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setSelectedImage(index)}
-                    className={`aspect-square rounded-lg overflow-hidden border-2 ${
-                      selectedImage === index ? 'border-blue-600' : 'border-gray-200'
-                    }`}
-                  >
-                    <Image
-                      src={image}
-                      alt={`${model.name} ${index + 1}`}
-                      width={120}
-                      height={120}
-                      className="w-full h-full object-cover"
-                    />
-                  </button>
-                ))}
-              </div>
+              {gallery.length > 0 && (
+                <div className="grid grid-cols-5 gap-2">
+                  {gallery.map((image, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setSelectedImage(index)}
+                      className={`aspect-square rounded-lg overflow-hidden border-2 ${
+                        selectedImage === index ? 'border-blue-600' : 'border-gray-200'
+                      }`}
+                    >
+                      <Image
+                        src={image || `/placeholder.svg?height=120&width=120&text=${index + 1}`}
+                        alt={`${model.name} ${index + 1}`}
+                        width={120}
+                        height={120}
+                        className="w-full h-full object-cover"
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Product Details */}
@@ -117,38 +140,52 @@ export default function ModelDetail({ params }: { params: { id: string } }) {
                   <Battery className="h-5 w-5 text-green-600" />
                   <div>
                     <p className="text-sm text-gray-600">Range</p>
-                    <p className="font-semibold">{model.specifications.range}</p>
+                    <p className="font-semibold">{specs.range || 'N/A'}</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-3 p-3 bg-white rounded-lg">
                   <Gauge className="h-5 w-5 text-blue-600" />
                   <div>
                     <p className="text-sm text-gray-600">Top Speed</p>
-                    <p className="font-semibold">{model.specifications.top_speed}</p>
+                    <p className="font-semibold">{specs.top_speed || 'N/A'}</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-3 p-3 bg-white rounded-lg">
                   <Clock className="h-5 w-5 text-orange-600" />
                   <div>
                     <p className="text-sm text-gray-600">Charging Time</p>
-                    <p className="font-semibold">{model.specifications.charging_time}</p>
+                    <p className="font-semibold">{specs.charging_time || 'N/A'}</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-3 p-3 bg-white rounded-lg">
                   <Zap className="h-5 w-5 text-yellow-600" />
                   <div>
                     <p className="text-sm text-gray-600">Motor Power</p>
-                    <p className="font-semibold">{model.specifications.motor_power}</p>
+                    <p className="font-semibold">{specs.motor_power || 'N/A'}</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-3 p-3 bg-white rounded-lg">
+                  <Battery className="h-5 w-5 text-purple-600" />
+                  <div>
+                    <p className="text-sm text-gray-600">Battery</p>
+                    <p className="font-semibold">{specs.battery || 'N/A'}</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-3 p-3 bg-white rounded-lg">
+                  <Gauge className="h-5 w-5 text-red-600" />
+                  <div>
+                    <p className="text-sm text-gray-600">Weight</p>
+                    <p className="font-semibold">{specs.weight || 'N/A'}</p>
                   </div>
                 </div>
               </div>
 
               {/* Colors */}
-              {model.specifications.colors && model.specifications.colors.length > 0 && (
+              {colors.length > 0 && (
                 <div>
                   <h3 className="text-lg font-semibold mb-3">Available Colors</h3>
                   <div className="flex space-x-2">
-                    {model.specifications.colors.map((color, index) => (
+                    {colors.map((color, index) => (
                       <button
                         key={index}
                         onClick={() => setSelectedColor(index)}
@@ -166,11 +203,11 @@ export default function ModelDetail({ params }: { params: { id: string } }) {
               )}
 
               {/* Features */}
-              {model.specifications.features && model.specifications.features.length > 0 && (
+              {features.length > 0 && (
                 <div>
                   <h3 className="text-lg font-semibold mb-3">Key Features</h3>
                   <div className="grid grid-cols-2 gap-2">
-                    {model.specifications.features.map((feature, index) => (
+                    {features.map((feature, index) => (
                       <div key={index} className="flex items-center space-x-2">
                         <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                         <span className="text-sm text-gray-700">{feature}</span>
