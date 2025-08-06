@@ -22,17 +22,23 @@ export default function ModelDetail({ params }: { params: Promise<{ id: string }
   const [selectedColor, setSelectedColor] = useState(0)
 
   useEffect(() => {
-    const fetchModel = async () => {
+    let ignore = false;
+    
+    (async () => {
       setLoading(true)
       const fetchedModel = await getModelById(resolvedParams.id)
-      if (fetchedModel) {
+      if (!ignore && fetchedModel) {
         setModel(fetchedModel)
       }
-      setLoading(false)
+      if (!ignore) {
+        setLoading(false)
+      }
+    })()
+    
+    return () => { 
+      ignore = true;
     }
-
-    fetchModel()
-  }, [resolvedParams.id, getModelById])
+  }, [resolvedParams.id]) // getModelById removed from dependencies
 
   if (loading) {
     return (

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { createClient } from "@/utils/supabase/client"
 
 export interface Model {
@@ -29,14 +29,14 @@ export function useModels() {
   const [models, setModels] = useState<Model[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const supabaseRef = useRef(createClient())
 
   const fetchModels = async () => {
     try {
       setLoading(true)
       setError(null)
 
-      const supabase = createClient()
-      const { data, error: fetchError } = await supabase
+      const { data, error: fetchError } = await supabaseRef.current
         .from('models')
         .select('*')
         .order('created_at', { ascending: true })
@@ -56,26 +56,28 @@ export function useModels() {
     }
   }
 
-  const getModelById = async (id: string): Promise<Model | null> => {
-    try {
-      const supabase = createClient()
-      const { data, error } = await supabase
-        .from('models')
-        .select('*')
-        .eq('id', id)
-        .single()
+  const getModelById = useCallback(
+    async (id: string): Promise<Model | null> => {
+      try {
+        const { data, error } = await supabaseRef.current
+          .from('models')
+          .select('*')
+          .eq('id', id)
+          .single()
 
-      if (error) {
-        console.error('Error fetching model:', error)
+        if (error) {
+          console.error('Error fetching model:', error)
+          return null
+        }
+
+        return data
+      } catch (err) {
+        console.error('Error in getModelById:', err)
         return null
       }
-
-      return data
-    } catch (err) {
-      console.error('Error in getModelById:', err)
-      return null
-    }
-  }
+    },
+    [] // No dependencies, function identity remains stable
+  )
 
   useEffect(() => {
     fetchModels()
