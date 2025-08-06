@@ -233,13 +233,7 @@ function LoginPageContent() {
                   </Button>
                 </form>
 
-                <div className="text-center">
-                  <p className="text-sm text-gray-600">
-                    Demo Credentials:
-                    <br />
-                    Admin: harshalbehare1@gmail.com
-                  </p>
-                </div>
+               
               </TabsContent>
 
               <TabsContent value="signup" className="space-y-4 mt-6">
